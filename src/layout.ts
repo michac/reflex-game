@@ -76,8 +76,12 @@ export const ROUND = { durationMs: 60_000, countdownFrom: 3 } as const;
  * spawns ramps linearly across the round.
  */
 export const SPAWN = {
-  startGapMs: 1100,
-  endGapMs: 550,
+  startGapMs: 1200, // a calm opening...
+  endGapMs: 350, // ...sprinting to ~3.4x the spawn rate by the end
+  // Ramp curve: gap = lerp(start, end, t**rampExp), t = round progress 0->1.
+  // rampExp 1 = linear; >1 back-loads the acceleration so it stays easy early
+  // and turns frantic in the final stretch.
+  rampExp: 2.2,
   retryGapMs: 150, // wait when no cell is free on BOTH halves
   weights: { tap: 0.62, multi2: 0.15, multi3: 0.08, bomb: 0.15 },
 } as const;

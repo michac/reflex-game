@@ -27,6 +27,10 @@ Built the whole thing in one pass. What was **stolen from Star Slingers** (Micha
 
 **Deploy:** copied SS's GitHub Pages mechanism — `.github/workflows/deploy-pages.yml`, simplified from SS's subdirectory setup to repo-root (no `working-directory`, no path scoping; reflex-game is its own repo, not a monorepo subfolder). Created public repo **michac/reflex-game** via `gh`, enabled Pages with the Actions build type, pushed. Build + deploy jobs both green; the served JS bundle resolves 200 (Vite's relative `base: './'` already handles the `/reflex-game/` project subpath, so no base change needed). **Live: https://michac.github.io/reflex-game/** — now reachable from any phone browser, no LAN/firewall step.
 
+## R11 — steeper spawn ramp (2026-06-07)
+
+First post-build tune. The linear 1.1s→0.55s spawn ramp felt too flat. Reworked to a **back-loaded** curve: `endGapMs` dropped to 350ms (≈3.4× the opening rate) and a new `SPAWN.rampExp` (2.2) eases the gap as `t**rampExp`, so the first half stays calm (~1s gaps through 30s) and the acceleration lands in the final ~15s — the "frantic finish" Michael asked for. Kept it one tunable constant (`rampExp: 1` = the old linear behavior) rather than hard-coding the curve. Verified the gap-vs-time table at the console (0/15/30/45/54/60s → 1200/1160/1015/749/526/350ms), `npm run build` clean, redeployed.
+
 ## Doc model adopted (2026-06-07)
 
 Initially wrote a single design-template `spec.md`. Restructured to Star Slingers' three-doc model at Michael's prompt: `spec.md` slimmed to **current built truth**, this `notes.md` created for history, `backlog.md` created as the work queue (items R1–R10 + the resolved R0). Same standing flow as SS: record wants in the backlog first, work one at a time, sync the spec + append history as part of finishing.

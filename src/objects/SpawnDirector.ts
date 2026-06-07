@@ -34,9 +34,11 @@ export class SpawnDirector {
   update(delta: number): void {
     this.elapsedMs += delta;
     this.sinceSpawnMs += delta;
-    // spawn gap ramps linearly across the round
+    // spawn gap ramps across the round, eased so it back-loads (rampExp>1):
+    // calm opening, frantic finish.
     const t = Math.min(1, this.elapsedMs / ROUND.durationMs);
-    const gap = SPAWN.startGapMs + (SPAWN.endGapMs - SPAWN.startGapMs) * t;
+    const eased = Math.pow(t, SPAWN.rampExp);
+    const gap = SPAWN.startGapMs + (SPAWN.endGapMs - SPAWN.startGapMs) * eased;
     if (this.sinceSpawnMs < gap) return;
 
     const cell = this.pickFreeCell();

@@ -39,7 +39,7 @@ Score more points than the other player before the timer ends. **Nobody dies** �
 
 ## 7. Pacing (built)
 - Round is **60 seconds**.
-- Spawn gap ramps **1.1s → 0.55s** linearly across the round (it speeds up).
+- Spawn gap ramps **1.2s → 0.35s** across the round, **eased to back-load the acceleration** (`SPAWN.rampExp`): a calm opening (~1s gaps through the first 30s), turning frantic in the final ~15s (~0.5s at 54s, 0.35s at the buzzer — roughly 3.4× the opening rate). Tune via `startGapMs`/`endGapMs`/`rampExp` in `src/layout.ts`.
 - Item lifetimes: single ~1.8s, double ~2.6s, triple ~3.2s, bomb ~2.2s.
 - Items **blink as a warning** near expiry, so a vanishing target never feels like a cheat.
 - The clock **pulses on both HUDs through the last 5 seconds**.
