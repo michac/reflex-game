@@ -1,0 +1,62 @@
+/* ============================================================
+   tokens-wireframe.css — neutral grayscale skin for Reflex Duel.
+   This file is the THEMING API: every style variant ships its own
+   tokens-<style>.css defining the same variables and paint rules.
+   Geometry lives in the HTML; paint lives here. No inline styles.
+   ============================================================ */
+
+:root {
+  /* fonts */
+  --font-display: 'Courier New', monospace;
+  --font-body: system-ui, sans-serif;
+
+  /* page chrome */
+  --page-bg: #16161c;
+  --chrome-ink: #d6d9e0;
+  --chrome-muted: #8a8f9b;
+  --accent: #d6d9e0;
+  --title-glow: none;
+
+  /* scene */
+  --scene-bg: #101015;
+  --line: #9aa0ae;          /* universal wireframe stroke */
+  --line-dim: #4c505c;
+  --p1: #e8ecf4;            /* TOP player */
+  --p2: #b0b6c4;            /* BOTTOM player */
+  --danger: #c7ccd8;        /* bombs */
+  --ink: #f0f2f7;           /* counts, scores */
+}
+
+/* Each half tints its own targets via --player (inherits into <use>). */
+.field-p1 { --player: var(--p1); }
+.field-p2 { --player: var(--p2); }
+
+/* ---- backdrop + divider ---- */
+.bg-wash      { fill: none; }
+.divider-band { fill: var(--line-dim); opacity: .25; }
+.divider-line { stroke: var(--line); stroke-width: 1.5; opacity: .7; }
+
+/* ---- grid ---- */
+.cell { fill: none; stroke: var(--line-dim); stroke-width: 1.5; }
+
+/* ---- items ---- */
+.target      { fill: none; stroke: var(--player, var(--line)); stroke-width: 2.5; }
+.target-core { fill: var(--player, var(--line)); }
+.target-ring { fill: none; stroke: var(--player, var(--line)); stroke-width: 1.5; opacity: .6; }
+.tap-count   { fill: var(--ink); font-size: 26px; }
+
+.bomb-body  { fill: none; stroke: var(--danger); stroke-width: 2.5; }
+.bomb-x     { stroke: var(--danger); stroke-width: 3; stroke-linecap: round; }
+.bomb-fuse  { fill: none; stroke: var(--line-dim); stroke-width: 2; stroke-linecap: round; }
+.bomb-spark { fill: var(--ink); }
+
+/* ---- feedback ---- */
+.ripple    { fill: none; stroke: var(--player, var(--line)); stroke-width: 2; }
+.score-pop { fill: var(--ink); font-size: 16px; }
+
+/* ---- per-player HUDs (P1's group is rotated 180° in the markup) ---- */
+.hud-label { fill: var(--chrome-muted); font-size: 11px; }
+.hud-value { fill: var(--ink); font-size: 16px; }
+.score-p1  { fill: var(--p1); }
+.score-p2  { fill: var(--p2); }
+.hud-time  { fill: var(--accent); }

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- maximum-scale/user-scalable: stop pinch-zoom during two-player play -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Reflex Duel</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #101015;
+      overflow: hidden;            /* no page scroll while tapping */
+      overscroll-behavior: none;   /* no pull-to-refresh */
+    }
+    #game { height: 100%; }
+    #game canvas {
+      display: block;
+      touch-action: none;          /* canvas owns all touch gestures */
+    }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
