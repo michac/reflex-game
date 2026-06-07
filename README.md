@@ -42,8 +42,13 @@ The top half is upside-down on purpose — it faces the top player.
 
 ## Design docs
 
-- `plans/spec.md` — the non-technical design spec (gameplay loop, scoring,
-  open questions)
+Three-doc model ported from Star Slingers:
+
+- `plans/spec.md` — **current truth**: built, reviewed design (gameplay loop,
+  scoring, layout)
+- `plans/backlog.md` — **work queue**: numbered items with statuses, what's
+  next / later / resolved
+- `plans/notes.md` — **history**: origin, builds, decisions, playtests
 - `plans/mockups/style-wireframe.html` — canonical layout skeleton; style
   variants copy it and swap the tokens `<link>` (see the Star Slingers
   mock conventions)

@@ -1,95 +1,69 @@
 # Reflex Duel — Design Spec
+*(working title — placeholder, swap freely; see backlog R8)*
 
-> Non-technical design spec. Template and conventions ported from
-> `claude-projects/game/plans/_spec-template.md`.
-> Supersedes the "Reaction Duel" concept sketch in the game repo — the
-> slap-your-half idea grew into a grid-tapping duel.
-> Status: **building**
+> Non-technical design spec. Status: **building & deployed** (full duel loop playable and live on GitHub Pages; not yet played by a real 5-year-old).
+> This file holds **current truth only** — decisions that were worked out, built, and reviewed.
+> The work queue (including unbuilt ideas) is [`backlog.md`](backlog.md); origin and history live in [`notes.md`](notes.md).
 
 ## 1. Pitch
-The phone splits in two; targets pop up in a grid on each player's half and
-whoever taps theirs fastest — while dodging bombs and finishing multi-tap
-targets — wins the round.
+Two players sit facing each other across a phone held in portrait, one at the top edge and one at the bottom. The screen splits in half; targets pop into a 3×3 grid on each player's half. Tap your targets fast, finish the numbered multi-tap ones, and never tap a bomb. Most points when the 60-second clock runs out wins.
 
 ## 2. Players & setup
-- 2 players, simultaneous versus play on one phone (Pixel 6).
-- **Portrait**, phone flat between the players, who face each other.
-- P1 plays from the **top** edge, P2 from the **bottom**. The top half's
-  entire UI is rotated 180° so it reads right-side-up for P1
-  (same trick as Star Slingers' P1 HUD).
-- Each player only taps inside their own half.
+- **2 players**, simultaneous **versus** play on one phone (designed for a parent + the 5-year-old).
+- **Device:** Pixel 6, laid flat in **portrait**, players **facing each other** — one at the top short edge, one at the bottom. Each player only taps inside their own half.
+- **P1 (top) plays upside-down by design:** the whole top half — grid, HUD, countdown, score pops, results card — is rotated 180° so it reads right-side-up for the top player.
+- Simultaneous multitouch confirmed fine on the device (`activePointers: 5`).
+- **No reading required** — everything is shapes, motion, and a few small numbers.
 
 ## 3. The goal
-Score more points than the other player before the round timer runs out.
-Nobody "dies" — the worst outcome is a lower number, kept gentle for a
-5-year-old.
+Score more points than the other player before the timer ends. **Nobody dies** — the worst outcome is a lower number, kept gentle for a 5-year-old (the loser's card says "SO CLOSE!", never "you lose").
 
-## 4. Gameplay loop
-1. Both players tap their half to ready up; a mirrored 3-2-1 countdown plays.
-2. For **60 seconds**, items pop into random grid cells on both halves —
-   **the same items, in the same cells, at the same time on both sides**
-   (mirrored sequence: pure reflex comparison, no luck complaints).
-3. Tap a target before it vanishes to score. Multi-tap targets show a
-   number counting down the taps they still need. Bombs must be left alone.
-4. Spawning speeds up gradually through the round.
-5. Timer hits zero → results card: scores, winner, tap to play again.
+## 4. Field & layout (built)
+- Logical field **360×740** (≈ Pixel 6 portrait), ported 1:1 from the canonical wireframe mock.
+- **Divider band** across the middle (y=370). Each half, reading from the divider toward the player's edge: a slim **HUD row** (SCORE left, TIME right), then a **3×3 grid** of 100px cells (gap 8, corner radius 14).
+- The top half is the bottom half's layout **rotated 180° about screen center (180,370)** — one set of geometry constants lays out both halves (each half is a Phaser container whose origin sits on the divider; P1's is rotated). This rotation *is* the design, not a cosmetic flourish.
+- **Canonical layout mock:** [`mockups/style-wireframe.html`](mockups/style-wireframe.html) (v1). The playfield is defined once in the mock and rendered twice (the P1 copy is the same `<use>` rotated 180°), exactly mirroring how the game builds the two halves.
 
-## 5. Controls & UI shape
-- One control: tap. Generous hit slop around each item for small fingers.
-- Screen (360×740 logical units, the mock viewBox):
-  - **Divider band** across the vertical middle.
-  - Each half, reading from the divider toward the player's edge:
-    a slim **HUD row** (score left, time right), then a **3×3 grid** of
-    ~100px cells filling the rest of the half.
-  - The top half is an exact 180°-rotated copy of the bottom half layout.
-- Items pop in with a scale tween, blink as a warning near expiry, shrink
-  away when they time out.
+## 5. Mirrored spawns (the core fairness call)
+- **One spawn stream drives both halves** — the same item type, in the same cell, at the same instant, on both sides (a `SpawnDirector` with a seeded PRNG).
+- A pure reflex comparison: no luck complaints, and the parent can glance at the kid's identical board to coach ("don't touch that one!").
+- A cell is eligible only while it's free on **both** halves — a tapped-away item leaves its cell reserved until its twin resolves too, so the boards never desync.
 
-## 6. Player dynamic
-Pure versus, but the mirrored sequence means both players always face the
-identical board — dad can glance across to coach ("don't touch that one!").
-Fairness across the age gap comes from tuning, not asymmetry (yet — see
-open questions).
+## 6. Items & scoring (built)
+- **Single-tap target** — tap before it vanishes: **+1**.
+- **Double-tap target** — shows **2**, counts down per tap, **+2** when finished (no partial credit — finishing is the skill).
+- **Triple-tap target** — shows **3**, **+3** when finished.
+- **Bomb** — must be left alone. Tapping it costs **−3** and **stuns that half ~1s** (red flash + camera shake; taps ignored during the stun). Score never drops below 0.
+- Missing a target (letting it expire) costs **nothing** — gentle at 5; only bombs punish.
+- **Numbers everywhere a 5-year-old can read them:** taps-remaining on items, the countdown clock, both scores, the 3-2-1 start.
 
-## 7. Difficulty & pacing
-- Spawn gap ramps from ~1.1s down to ~0.55s across the round.
-- Item lifetimes: single-tap ~1.8s, double ~2.6s, triple ~3.2s, bomb ~2.2s.
-- Mistakes are cheap: a missed target just vanishes (no penalty); only
-  bomb taps cost points + a ~1s stun on your half (screen flash, taps
-  ignored). Score never goes below 0.
-- **No handicap in v1** — symmetric rules; fairness levers get tuned in
-  playtesting (see open questions).
+## 7. Pacing (built)
+- Round is **60 seconds**.
+- Spawn gap ramps **1.1s → 0.55s** linearly across the round (it speeds up).
+- Item lifetimes: single ~1.8s, double ~2.6s, triple ~3.2s, bomb ~2.2s.
+- Items **blink as a warning** near expiry, so a vanishing target never feels like a cheat.
+- The clock **pulses on both HUDs through the last 5 seconds**.
+- **No handicap in v1** — symmetric rules for both seats. Fairness across the age gap is deferred to playtesting (backlog R1).
 
-## 8. Numbers & scoring
-- Single-tap target: **+1**.
-- Double-tap target: shows **2**, counts down per tap, **+2** when finished
-  (no partial credit — finishing is the skill).
-- Triple-tap target: shows **3**, **+3** when finished.
-- Bomb tap: **−3** and ~1s stun.
-- Numbers everywhere a 5-year-old can read them: taps-remaining on items,
-  the countdown clock, both scores, the 3-2-1 start.
+## 8. Feel / juice (built)
+- Pop-in bounce on spawn (Back.easeOut scale); quick squash on each multi-tap.
+- Ripple ring + floating "+1/+2/+3" on a score; floating "−3" on a bomb.
+- Bomb tap: half-screen red flash + camera shake.
+- Per-seat results card ("YOU WIN!" / "SO CLOSE!" / "TIE!"), readable from each seat.
+- Sound is **not yet built** (backlog R4).
 
-## 9. Feel / juice
-- Pop-in bounce on spawn; ripple ring + floating "+1/+2/+3" on a score.
-- Bomb tap: screen-flash on that half, shake, floating "−3".
-- Expiry warning blink so a vanishing target never feels like a cheat.
-- Last 5 seconds: clock pulses on both HUDs.
-- Results card readable from both seats (per-seat rotated text).
-- Sound later (stretch) — tap pops, bomb thud, crowd-cheer at results.
+## 9. Round flow (built)
+`ready` → `countdown` → `play` → `results`, a small phase machine in `DuelScene`:
+1. Both players tap their half to ready up ("TAP WHEN READY" → "READY!").
+2. Mirrored **3-2-1-GO!** countdown (pops per step).
+3. 60-second **play** phase (spawns, taps, scoring, stuns).
+4. **Results**: dim + per-seat card; tap to play again (a ~600ms lockout stops a frantic last tap from skipping it). Restart re-inits all state.
 
-## 10. Stretch ideas
-- Sound effects + a simple music loop.
-- Handicap levers: per-player level dial (spawn rate / lifetime), gentler
-  bomb penalty for the kid.
-- More item types: "tap-and-hold", "golden target" (+5, tiny lifetime),
-  letter/number targets ("tap the 4!") for sneaky learning.
-- Best-of-3 match flow with a match-score strip on the divider.
-- Style variants (neon, vector, …) via token swap, same as Star Slingers.
+## 10. Tech (built)
+Phaser 3 + TypeScript + Vite, ported from the Star Slingers prototype. All colors/fonts live in [`../src/tokens.ts`](../src/tokens.ts) (the theming API — restyling = swapping token values for a winning style variant). Geometry/tuning in [`../src/layout.ts`](../src/layout.ts). Procedural textures, nothing loaded from disk. Deployed to **GitHub Pages** via `.github/workflows/deploy-pages.yml` → https://michac.github.io/reflex-game/ .
+
+## Everything else
+Handicap/fairness levers, sound, more item types, match flow, style variants, full-screen/PWA: tracked as [`backlog.md`](backlog.md) items — wants to react to, not built decisions. They graduate into this spec when worked out, built, and reviewed.
 
 ## Open questions
-- Handicap defaults once playtested — slower despawn for the kid?
-  Adjustable per-player level? (Deliberately deferred from v1.)
-- Round length: is 60s right for a 5-year-old's attention span, or better
-  at 45s?
-- Does the stun need to be more visible (big "WAIT!" icon) to read at 5?
-- Tie-breaker: sudden-death single target, or just call it a tie?
+Tracked in [`backlog.md`](backlog.md) — nothing floats in chat.
