@@ -7,13 +7,15 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "test:update": "playwright test --update-snapshots"
   },
   "dependencies": {
     "phaser": "^3.90.0"
   },
   "devDependencies": {
-    "playwright-core": "^1.60.0",
+    "@playwright/test": "^1.60.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.16"
   }

@@ -1,4 +1,7 @@
 node_modules/
 dist/
 *.local
-smoke-*.png
+/test-results/
+/playwright-report/
+/blob-report/
+.last-run.json
