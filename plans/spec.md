@@ -23,6 +23,7 @@ Score more points than the other player before the timer ends. **Nobody dies** �
 - **Divider band** across the middle (y=370). Each half, reading from the divider toward the player's edge: a slim **HUD row** (SCORE left, TIME right), then a **3×3 grid** of 100px cells (gap 8, corner radius 14).
 - The top half is the bottom half's layout **rotated 180° about screen center (180,370)** — one set of geometry constants lays out both halves (each half is a Phaser container whose origin sits on the divider; P1's is rotated). This rotation *is* the design, not a cosmetic flourish.
 - **Canonical layout mock:** [`mockups/style-wireframe.html`](mockups/style-wireframe.html) (v1). The playfield is defined once in the mock and rendered twice (the P1 copy is the same `<use>` rotated 180°), exactly mirroring how the game builds the two halves.
+- **Style review gallery:** [`mockups/style-gallery.html`](mockups/style-gallery.html) compares six visual directions: Electric Arcade, Sticker Pop, Sport Court, Signal Lab, Crayon Sketch, and Saturday Pop. These are static review mocks only; the playable game still uses the wireframe tokens until a winner is selected and ported into [`../src/tokens.ts`](../src/tokens.ts).
 
 ## 5. Mirrored spawns (the core fairness call)
 - **One spawn stream drives both halves** — the same item type, in the same cell, at the same instant, on both sides (a `SpawnDirector` with a seeded PRNG).

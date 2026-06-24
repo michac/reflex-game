@@ -1,0 +1,126 @@
+:root {
+  --font-display: 'Arial Black', 'Trebuchet MS', system-ui, sans-serif;
+  --font-body: 'Trebuchet MS', system-ui, sans-serif;
+
+  --page-bg: #202236;
+  --chrome-ink: #fff7e8;
+  --chrome-muted: #c9c1d8;
+  --accent: #ffe066;
+  --title-glow: 0 4px 0 #111428, 0 0 18px rgba(255,224,102,.28);
+
+  --scene-bg: #7ad8ff;
+  --line: #172033;
+  --line-dim: #4aaed2;
+  --p1: #fff05a;
+  --p2: #ff5fa2;
+  --danger: #7b43ff;
+  --ink: #172033;
+}
+
+.field-p1 { --player: var(--p1); }
+.field-p2 { --player: var(--p2); }
+
+.bg-wash {
+  fill: var(--scene-bg);
+}
+
+.divider-band {
+  fill: #172033;
+  opacity: 1;
+}
+
+.divider-line {
+  stroke: #fff7e8;
+  stroke-width: 2.5;
+  opacity: .9;
+}
+
+.cell {
+  fill: rgba(255,255,255,.42);
+  stroke: var(--line);
+  stroke-width: 3.5;
+  filter: drop-shadow(0 5px 0 rgba(23,32,51,.22));
+}
+
+.target {
+  fill: var(--player, #fff);
+  stroke: var(--line);
+  stroke-width: 5.5;
+  filter: drop-shadow(0 6px 0 rgba(23,32,51,.24));
+}
+
+.target-core {
+  fill: var(--line);
+}
+
+.target-ring {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 3.5;
+  opacity: .78;
+}
+
+.tap-count {
+  fill: var(--line);
+  font-size: 29px;
+  font-weight: 900;
+}
+
+.bomb-body {
+  fill: var(--danger);
+  stroke: var(--line);
+  stroke-width: 5.5;
+  filter: drop-shadow(0 6px 0 rgba(23,32,51,.24));
+}
+
+.bomb-x {
+  stroke: #fff7e8;
+  stroke-width: 5.5;
+  stroke-linecap: round;
+}
+
+.bomb-fuse {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.bomb-spark {
+  fill: #ffe066;
+  filter: drop-shadow(0 0 4px #fff7e8);
+}
+
+.ripple {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 4;
+}
+
+.score-pop {
+  fill: #fff7e8;
+  stroke: var(--line);
+  stroke-width: .8;
+  paint-order: stroke fill;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.hud-label {
+  fill: rgba(23,32,51,.76);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.hud-value {
+  fill: #fff7e8;
+  stroke: var(--line);
+  stroke-width: .8;
+  paint-order: stroke fill;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.score-p1 { fill: var(--p1); }
+.score-p2 { fill: var(--p2); }
+.hud-time { fill: var(--accent); }

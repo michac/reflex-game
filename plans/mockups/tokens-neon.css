@@ -1,0 +1,55 @@
+:root {
+  --font-display: 'Trebuchet MS', 'Arial Black', system-ui, sans-serif;
+  --font-body: system-ui, sans-serif;
+
+  --page-bg: #07070d;
+  --chrome-ink: #f6fbff;
+  --chrome-muted: #9aa7bb;
+  --accent: #ffe45c;
+  --title-glow: 0 0 12px rgba(0, 229, 255, .7), 0 0 28px rgba(255, 55, 178, .45);
+
+  --scene-bg: #090a14;
+  --line: #586078;
+  --line-dim: #24283b;
+  --p1: #00e5ff;
+  --p2: #ff37b2;
+  --danger: #ffb000;
+  --ink: #fbfdff;
+}
+
+.field-p1 { --player: var(--p1); }
+.field-p2 { --player: var(--p2); }
+
+.bg-wash { fill: var(--scene-bg); }
+.divider-band { fill: #16192a; opacity: .95; }
+.divider-line { stroke: var(--accent); stroke-width: 1.5; opacity: .85; filter: drop-shadow(0 0 4px var(--accent)); }
+
+.cell {
+  fill: rgba(255,255,255,.018);
+  stroke: var(--line-dim);
+  stroke-width: 1.5;
+}
+
+.target {
+  fill: rgba(255,255,255,.02);
+  stroke: var(--player, var(--line));
+  stroke-width: 4;
+  filter: drop-shadow(0 0 8px var(--player, var(--line)));
+}
+.target-core { fill: var(--player, var(--line)); filter: drop-shadow(0 0 7px var(--player, var(--line))); }
+.target-ring { fill: none; stroke: var(--player, var(--line)); stroke-width: 2.5; opacity: .72; }
+.tap-count { fill: var(--ink); font-size: 27px; font-weight: 800; filter: drop-shadow(0 0 5px var(--player, var(--line))); }
+
+.bomb-body { fill: rgba(255,176,0,.08); stroke: var(--danger); stroke-width: 4; filter: drop-shadow(0 0 8px var(--danger)); }
+.bomb-x { stroke: var(--danger); stroke-width: 4; stroke-linecap: round; }
+.bomb-fuse { fill: none; stroke: #ff6a3d; stroke-width: 3; stroke-linecap: round; }
+.bomb-spark { fill: var(--ink); filter: drop-shadow(0 0 6px var(--danger)); }
+
+.ripple { fill: none; stroke: var(--player, var(--line)); stroke-width: 3; filter: drop-shadow(0 0 7px var(--player, var(--line))); }
+.score-pop { fill: var(--ink); font-size: 16px; font-weight: 900; filter: drop-shadow(0 0 5px var(--player, var(--line))); }
+
+.hud-label { fill: var(--chrome-muted); font-size: 10px; letter-spacing: 1px; }
+.hud-value { fill: var(--ink); font-size: 17px; font-weight: 900; }
+.score-p1 { fill: var(--p1); filter: drop-shadow(0 0 5px var(--p1)); }
+.score-p2 { fill: var(--p2); filter: drop-shadow(0 0 5px var(--p2)); }
+.hud-time { fill: var(--accent); filter: drop-shadow(0 0 5px var(--accent)); }

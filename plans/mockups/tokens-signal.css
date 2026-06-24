@@ -1,0 +1,54 @@
+:root {
+  --font-display: 'Courier New', monospace;
+  --font-body: Inter, ui-sans-serif, system-ui, sans-serif;
+
+  --page-bg: #111318;
+  --chrome-ink: #edf5ef;
+  --chrome-muted: #8d9a9a;
+  --accent: #8fffe2;
+  --title-glow: 0 0 18px rgba(143,255,226,.28);
+
+  --scene-bg: #14181b;
+  --line: #61706d;
+  --line-dim: #26312f;
+  --p1: #a7ff3f;
+  --p2: #ff9f3f;
+  --danger: #ff4f62;
+  --ink: #f4fff8;
+}
+
+.field-p1 { --player: var(--p1); }
+.field-p2 { --player: var(--p2); }
+
+.bg-wash { fill: var(--scene-bg); }
+.divider-band { fill: #202927; opacity: 1; }
+.divider-line { stroke: var(--accent); stroke-width: 1; opacity: .78; }
+
+.cell {
+  fill: rgba(143,255,226,.025);
+  stroke: var(--line-dim);
+  stroke-width: 1.5;
+}
+
+.target {
+  fill: rgba(255,255,255,.015);
+  stroke: var(--player, var(--line));
+  stroke-width: 3;
+}
+.target-core { fill: var(--player, var(--line)); }
+.target-ring { fill: none; stroke: var(--player, var(--line)); stroke-width: 2; opacity: .65; }
+.tap-count { fill: var(--ink); font-size: 26px; font-weight: 700; }
+
+.bomb-body { fill: rgba(255,79,98,.04); stroke: var(--danger); stroke-width: 3; }
+.bomb-x { stroke: var(--danger); stroke-width: 3.5; stroke-linecap: round; }
+.bomb-fuse { fill: none; stroke: var(--line); stroke-width: 2; stroke-linecap: round; }
+.bomb-spark { fill: var(--accent); }
+
+.ripple { fill: none; stroke: var(--player, var(--line)); stroke-width: 2.5; }
+.score-pop { fill: var(--ink); font-size: 16px; font-weight: 700; }
+
+.hud-label { fill: var(--chrome-muted); font-size: 10px; letter-spacing: 1px; }
+.hud-value { fill: var(--ink); font-size: 16px; font-weight: 700; }
+.score-p1 { fill: var(--p1); }
+.score-p2 { fill: var(--p2); }
+.hud-time { fill: var(--accent); }

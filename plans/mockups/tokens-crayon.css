@@ -1,0 +1,129 @@
+:root {
+  --font-display: 'Comic Sans MS', 'Trebuchet MS', system-ui, sans-serif;
+  --font-body: 'Comic Sans MS', 'Trebuchet MS', system-ui, sans-serif;
+
+  --page-bg: #ebe1cf;
+  --chrome-ink: #3d352c;
+  --chrome-muted: #776a5c;
+  --accent: #d49a29;
+  --title-glow: none;
+
+  --scene-bg: #fbf3df;
+  --line: #5d5146;
+  --line-dim: #cdbf9c;
+  --p1: #3f8fd2;
+  --p2: #e06b55;
+  --danger: #5a4a8f;
+  --ink: #3d352c;
+}
+
+.field-p1 { --player: var(--p1); }
+.field-p2 { --player: var(--p2); }
+
+.bg-wash {
+  fill: var(--scene-bg);
+}
+
+.divider-band {
+  fill: #f1c86a;
+  opacity: .75;
+}
+
+.divider-line {
+  stroke: #8a724c;
+  stroke-width: 2.5;
+  stroke-dasharray: 12 5 4 5;
+  opacity: .78;
+}
+
+.cell {
+  fill: rgba(255,255,255,.24);
+  stroke: var(--line-dim);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 18 5 7 4;
+}
+
+.target {
+  fill: color-mix(in srgb, var(--player, var(--line)) 18%, transparent);
+  stroke: var(--player, var(--line));
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 20 4 8 5;
+  filter: drop-shadow(2px 3px 0 rgba(93,81,70,.12));
+}
+
+.target-core {
+  fill: var(--player, var(--line));
+  opacity: .86;
+}
+
+.target-ring {
+  fill: none;
+  stroke: var(--player, var(--line));
+  stroke-width: 3.5;
+  stroke-dasharray: 9 4;
+  opacity: .72;
+}
+
+.tap-count {
+  fill: var(--ink);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.bomb-body {
+  fill: rgba(90,74,143,.13);
+  stroke: var(--danger);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 17 5 6 4;
+  filter: drop-shadow(2px 3px 0 rgba(93,81,70,.14));
+}
+
+.bomb-x {
+  stroke: #d65745;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.bomb-fuse {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 8 4;
+}
+
+.bomb-spark {
+  fill: #e6a22c;
+}
+
+.ripple {
+  fill: none;
+  stroke: var(--player, var(--line));
+  stroke-width: 3.5;
+  stroke-dasharray: 10 5;
+}
+
+.score-pop {
+  fill: var(--ink);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.hud-label {
+  fill: var(--chrome-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.hud-value {
+  fill: var(--ink);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.score-p1 { fill: var(--p1); }
+.score-p2 { fill: var(--p2); }
+.hud-time { fill: var(--accent); }
