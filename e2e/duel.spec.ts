@@ -225,8 +225,37 @@ test('visual baselines for the deterministic screens', async ({ page }) => {
   await page.waitForTimeout(300); // pop tween settled, well before "2"
   await expect(page).toHaveScreenshot('countdown.png');
 
-  // RESULTS — static per-seat cards over the dim.
-  await waitForState(page, (s) => s.phase === 'results', 'results', ROUND_MS + 10_000);
+  // RESULTS — force a clean zero-score card; the full-round path is covered above.
+  await waitForState(page, (s) => s.phase === 'play', 'play phase', 8_000);
+  await page.waitForTimeout(800); // let the countdown banner fade out
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scene = (window as any).__game.scene.keys['Duel'];
+    const transientText = ['3', '2', '1', 'GO!'];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const destroyTransientText = (root: any): void => {
+      if (root.type === 'Text' && transientText.includes(root.text)) {
+        root.destroy();
+        return;
+      }
+      if (!root.list) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const child of [...root.list] as any[]) destroyTransientText(child);
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const child of [...scene.children.list] as any[]) destroyTransientText(child);
+    for (const half of [scene.halves.top, scene.halves.bottom]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const item of [...half.items] as any[]) {
+        item.removeAll(true);
+        item.destroy();
+      }
+      half.items.clear();
+      half.score = 0;
+      half.hud.setScore(0);
+    }
+    scene.endRound();
+  });
   await page.waitForTimeout(400); // cards built
   await expect(page).toHaveScreenshot('results.png');
 });

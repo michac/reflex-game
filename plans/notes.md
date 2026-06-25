@@ -35,6 +35,12 @@ First post-build tune. The linear 1.1s→0.55s spawn ramp felt too flat. Reworke
 
 Added a Vite-served style gallery at `plans/mockups/style-gallery.html` plus six visual directions using the canonical mirrored scene: Electric Arcade, Sticker Pop, Sport Court, Signal Lab, Crayon Sketch, and Saturday Pop. The variants share a small renderer (`shared/duel-mock.js`) so the geometry stays identical while each `tokens-*.css` explores a different paint system. This did **not** change the playable Phaser game; the chosen direction still needs to be ported into `src/tokens.ts` before it ships.
 
+## R12 — Saturday Pop port (2026-06-25)
+
+Selected **Saturday Pop** as the shipped visual direction and ported `plans/mockups/tokens-cartoon.css` into the playable Phaser build. `src/tokens.ts` now carries the sky background, dark ink linework, yellow P1, pink P2, purple bombs, cream/yellow text colors, chunky strokes, divider paint, score-pop strokes, and tokenized results dim. Procedural textures were redrawn to match the mock's filled cartoon shapes: translucent rounded grid cells with ink outlines, filled player-color targets with core dot / inner ring states, purple bombs with cream X, dark fuse, yellow spark, and dark ink ripples.
+
+Gameplay stayed intentionally untouched: same 360x740 geometry, mirrored spawn stream, cell reservation behavior, scoring, timing, input routing, and no external art assets. Verification target for this change is `npm run typecheck`, `npm run build`, `npm run test:update` for the intentional visual baseline change, then `npm test`. Pushing `main` deploys the Saturday Pop build to GitHub Pages for phone testing at https://michac.github.io/reflex-game/ .
+
 ## Doc model adopted (2026-06-07)
 
 Initially wrote a single design-template `spec.md`. Restructured to Star Slingers' three-doc model at Michael's prompt: `spec.md` slimmed to **current built truth**, this `notes.md` created for history, `backlog.md` created as the work queue (items R1–R10 + the resolved R0). Same standing flow as SS: record wants in the backlog first, work one at a time, sync the spec + append history as part of finishing.

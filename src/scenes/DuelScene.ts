@@ -146,7 +146,14 @@ export class DuelScene extends Phaser.Scene {
     this.phase = 'results';
     this.resultsAtMs = this.elapsedMs;
     // dim everything, then build per-seat cards ABOVE the dim
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
+    this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      COLORS.line,
+      STROKES.overlay.resultDimAlpha
+    );
     this.showResults('top', this.halves.top.score, this.halves.bottom.score);
     this.showResults('bottom', this.halves.bottom.score, this.halves.top.score);
   }
@@ -166,11 +173,13 @@ export class DuelScene extends Phaser.Scene {
           fontSize: `${size}px`,
           color: col,
           fontStyle: 'bold',
+          stroke: CSS.line,
+          strokeThickness: display || size >= 24 ? STROKES.textStroke.heavy : STROKES.textStroke.thin,
         })
         .setOrigin(0.5);
     c.add([
       text(110, verdict, 34, color),
-      text(165, `${mine} — ${theirs}`, 24, CSS.ink, true),
+      text(165, `${mine} - ${theirs}`, 24, CSS.cream, true),
       text(215, 'tap to play again', 13, CSS.chromeMuted),
     ]);
   }
@@ -191,6 +200,8 @@ export class DuelScene extends Phaser.Scene {
         fontSize: `${size}px`,
         color,
         fontStyle: 'bold',
+        stroke: CSS.line,
+        strokeThickness: display || size >= 22 ? STROKES.textStroke.heavy : STROKES.textStroke.thin,
       })
       .setOrigin(0.5);
     this.halves[seat].container.add(t);
@@ -200,9 +211,9 @@ export class DuelScene extends Phaser.Scene {
   private drawDivider(): void {
     const g = this.add.graphics();
     const top = DIVIDER_Y - DIVIDER_BAND / 2;
-    g.fillStyle(COLORS.lineDim, STROKES.divider.bandAlpha);
+    g.fillStyle(COLORS.dividerBand, STROKES.divider.bandAlpha);
     g.fillRect(0, top, GAME_WIDTH, DIVIDER_BAND);
-    g.lineStyle(STROKES.divider.width, COLORS.line, STROKES.divider.alpha);
+    g.lineStyle(STROKES.divider.width, COLORS.cream, STROKES.divider.alpha);
     g.beginPath();
     g.moveTo(0, top);
     g.lineTo(GAME_WIDTH, top);

@@ -15,7 +15,7 @@ import {
   HALF_HEIGHT,
   type ItemType,
 } from '../layout';
-import { COLORS, CSS, FONTS } from '../tokens';
+import { COLORS, CSS, FONTS, STROKES } from '../tokens';
 import { Hud } from './Hud';
 import { Item } from './Item';
 import { TEX, type PlayerKey } from './textures';
@@ -150,7 +150,13 @@ export class PlayerHalf {
 
   private popText(x: number, y: number, text: string): void {
     const t = this.scene.add
-      .text(x, y, text, { fontFamily: FONTS.display, fontSize: '20px', color: CSS.ink })
+      .text(x, y, text, {
+        fontFamily: FONTS.display,
+        fontSize: '20px',
+        color: CSS.cream,
+        stroke: CSS.line,
+        strokeThickness: STROKES.textStroke.thin,
+      })
       .setOrigin(0.5);
     this.container.add(t);
     this.scene.tweens.add({

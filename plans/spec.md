@@ -23,7 +23,8 @@ Score more points than the other player before the timer ends. **Nobody dies** �
 - **Divider band** across the middle (y=370). Each half, reading from the divider toward the player's edge: a slim **HUD row** (SCORE left, TIME right), then a **3×3 grid** of 100px cells (gap 8, corner radius 14).
 - The top half is the bottom half's layout **rotated 180° about screen center (180,370)** — one set of geometry constants lays out both halves (each half is a Phaser container whose origin sits on the divider; P1's is rotated). This rotation *is* the design, not a cosmetic flourish.
 - **Canonical layout mock:** [`mockups/style-wireframe.html`](mockups/style-wireframe.html) (v1). The playfield is defined once in the mock and rendered twice (the P1 copy is the same `<use>` rotated 180°), exactly mirroring how the game builds the two halves.
-- **Style review gallery:** [`mockups/style-gallery.html`](mockups/style-gallery.html) compares six visual directions: Electric Arcade, Sticker Pop, Sport Court, Signal Lab, Crayon Sketch, and Saturday Pop. These are static review mocks only; the playable game still uses the wireframe tokens until a winner is selected and ported into [`../src/tokens.ts`](../src/tokens.ts).
+- **Shipped skin:** the playable game now uses the **Saturday Pop** visual direction from [`mockups/style-cartoon.html`](mockups/style-cartoon.html) / [`mockups/tokens-cartoon.css`](mockups/tokens-cartoon.css): sky field, dark cartoon ink, yellow P1, pink P2, purple bombs, cream/yellow HUD text, filled chunky targets, and translucent rounded grid cells.
+- **Style review gallery:** [`mockups/style-gallery.html`](mockups/style-gallery.html) compares six visual directions: Electric Arcade, Sticker Pop, Sport Court, Signal Lab, Crayon Sketch, and Saturday Pop. These remain reference mocks; Saturday Pop is the selected direction currently ported into [`../src/tokens.ts`](../src/tokens.ts).
 
 ## 5. Mirrored spawns (the core fairness call)
 - **One spawn stream drives both halves** — the same item type, in the same cell, at the same instant, on both sides (a `SpawnDirector` with a seeded PRNG).
@@ -61,7 +62,7 @@ Score more points than the other player before the timer ends. **Nobody dies** �
 4. **Results**: dim + per-seat card; tap to play again (a ~600ms lockout stops a frantic last tap from skipping it). Restart re-inits all state.
 
 ## 10. Tech (built)
-Phaser 3 + TypeScript + Vite, ported from the Star Slingers prototype. All colors/fonts live in [`../src/tokens.ts`](../src/tokens.ts) (the theming API — restyling = swapping token values for a winning style variant). Geometry/tuning in [`../src/layout.ts`](../src/layout.ts). Procedural textures, nothing loaded from disk. Deployed to **GitHub Pages** via `.github/workflows/deploy-pages.yml` → https://michac.github.io/reflex-game/ .
+Phaser 3 + TypeScript + Vite, ported from the Star Slingers prototype. All colors/fonts live in [`../src/tokens.ts`](../src/tokens.ts) (the theming API, currently ported from the Saturday Pop mock). Geometry/tuning in [`../src/layout.ts`](../src/layout.ts). Procedural textures, nothing loaded from disk. Deployed to **GitHub Pages** via `.github/workflows/deploy-pages.yml` → https://michac.github.io/reflex-game/ .
 
 ## Everything else
 Handicap/fairness levers, sound, more item types, match flow, style variants, full-screen/PWA: tracked as [`backlog.md`](backlog.md) items — wants to react to, not built decisions. They graduate into this spec when worked out, built, and reviewed.

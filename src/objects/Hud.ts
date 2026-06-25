@@ -5,7 +5,7 @@
  */
 import Phaser from 'phaser';
 import { HUD_LOCAL } from '../layout';
-import { CSS, FONTS } from '../tokens';
+import { CSS, FONTS, STROKES } from '../tokens';
 import type { PlayerKey } from './textures';
 
 const PULSE_AT_S = 5; // clock pulses through the last seconds
@@ -24,16 +24,19 @@ export class Hud {
         .text(x, HUD_LOCAL.y, text, {
           fontFamily: FONTS.body,
           fontSize: '11px',
-          color: CSS.chromeMuted,
+          color: CSS.ink,
           fontStyle: 'bold',
         })
-        .setOrigin(0, 0.5);
+        .setOrigin(0, 0.5)
+        .setAlpha(0.76);
     const value = (x: number, text: string, color: string) =>
       scene.add
         .text(x, HUD_LOCAL.y, text, {
           fontFamily: FONTS.display,
           fontSize: '16px',
           color,
+          stroke: CSS.line,
+          strokeThickness: STROKES.textStroke.thin,
         })
         .setOrigin(0, 0.5);
 
