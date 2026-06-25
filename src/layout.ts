@@ -39,8 +39,13 @@ export function cellCenter(index: number): { x: number; y: number } {
 /** HUD row between the divider and the grid (mock baseline y≈400 = local 30). */
 export const HUD_LOCAL = {
   y: 30,
+  statY: 47,
   scoreLabelX: 18,
   scoreValueX: 64,
+  mistakeLabelX: 18,
+  mistakeValueX: 46,
+  cpsLabelX: 272,
+  cpsValueX: 300,
   timeLabelX: 272,
   timeValueX: 308,
 } as const;
@@ -71,12 +76,15 @@ export const BOMB = { penalty: 3, stunMs: 1000 } as const;
 
 export const ROUND = { durationMs: 60_000, countdownFrom: 3 } as const;
 
+/** Team result rating. One star is the floor; thresholds unlock stars 2 and 3. */
+export const RESULT_STARS = { twoStarScore: 25, threeStarScore: 55 } as const;
+
 /** Per-player adaptive spawn pacing, expressed as decision-load CPS. */
 export const SPAWN = {
-  startCps: 0.9,
-  maxCps: 3.2,
-  maxCpsVelocity: 0.16, // CPS/sec
-  cpsAcceleration: 0.015, // CPS/sec^2
+  startCps: 1.15,
+  maxCps: 4.0,
+  maxCpsVelocity: 0.24, // CPS/sec
+  cpsAcceleration: 0.022, // CPS/sec^2
   minGapMs: 240,
   maxGapMs: 1400,
   retryGapMs: 150, // wait when no cell is free on this half

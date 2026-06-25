@@ -28,8 +28,11 @@ type State = {
   phase: string;
   top: LiveItem[];
   bottom: LiveItem[];
-  scoreTop: number;
-  scoreBottom: number;
+  scoreTeam: number;
+  hudScoreTop: string;
+  hudScoreBottom: string;
+  mistakesTop: number;
+  mistakesBottom: number;
   difficulty: Record<Half, Difficulty>;
 };
 
@@ -87,8 +90,11 @@ async function readState(page: Page): Promise<State> {
       phase: scene.phase,
       top: dump(scene.halves.top),
       bottom: dump(scene.halves.bottom),
-      scoreTop: scene.halves.top.score,
-      scoreBottom: scene.halves.bottom.score,
+      scoreTeam: scene.teamScore,
+      hudScoreTop: scene.halves.top.hud.scoreText.text,
+      hudScoreBottom: scene.halves.bottom.hud.scoreText.text,
+      mistakesTop: scene.halves.top.mistakes,
+      mistakesBottom: scene.halves.bottom.mistakes,
       difficulty: scene.director.debugState(),
     };
   });
@@ -159,68 +165,107 @@ test('independent spawn lanes populate both halves without cell collisions', asy
 test('single-tap target scores +1 and despawns', async ({ page }) => {
   await startRound(page);
   const item = await waitForLiveItem(page, 'bottom', 'tap');
-  const before = (await readState(page)).scoreBottom;
+  const before = (await readState(page)).scoreTeam;
 
   await tapItem(page, item);
 
-  await waitForState(page, (s) => s.scoreBottom === before + 1, 'bottom score +1');
+  await waitForState(page, (s) => s.scoreTeam === before + 1, 'team score +1');
   const after = await readState(page);
-  expect(after.scoreBottom).toBe(before + 1);
+  expect(after.scoreTeam).toBe(before + 1);
+  expect(after.hudScoreTop).toBe(String(after.scoreTeam));
+  expect(after.hudScoreBottom).toBe(String(after.scoreTeam));
   // the tapped target is gone from the live set
   expect(after.bottom.find((i) => i.cell === item.cell && i.type === 'tap')).toBeUndefined();
+});
+
+test('top target contributes to the same team score', async ({ page }) => {
+  await startRound(page);
+  const item = await waitForLiveItem(page, 'top', 'tap');
+  const before = (await readState(page)).scoreTeam;
+
+  await tapItem(page, item, 'top');
+
+  await waitForState(page, (s) => s.scoreTeam === before + 1, 'team score +1 from top');
+  const after = await readState(page);
+  expect(after.hudScoreTop).toBe(String(after.scoreTeam));
+  expect(after.hudScoreBottom).toBe(String(after.scoreTeam));
 });
 
 test('multi-tap target gives no partial credit', async ({ page }) => {
   await startRound(page);
   const item = await waitForLiveItem(page, 'bottom', 'multi2');
-  const before = (await readState(page)).scoreBottom;
+  const before = (await readState(page)).scoreTeam;
 
   await tapItem(page, item); // first of two taps
   await page.waitForTimeout(150);
-  expect((await readState(page)).scoreBottom).toBe(before); // no points yet
+  expect((await readState(page)).scoreTeam).toBe(before); // no points yet
 
   await tapItem(page, item); // completes it
-  await waitForState(page, (s) => s.scoreBottom === before + 2, 'bottom score +2');
-  expect((await readState(page)).scoreBottom).toBe(before + 2);
+  await waitForState(page, (s) => s.scoreTeam === before + 2, 'team score +2');
+  expect((await readState(page)).scoreTeam).toBe(before + 2);
 });
 
 test('bomb applies a clamped penalty and stuns the half', async ({ page }) => {
   await startRound(page);
-  // Need a bomb AND a plain target live together so we can probe the stun.
-  const pair = await waitForState(
-    page,
-    (s) => {
-      const bomb = s.bottom.find((i) => i.type === 'bomb');
-      const target = s.bottom.find((i) => i.type === 'tap');
-      return bomb && target ? { bomb, target } : null;
-    },
-    'a bomb and a tap target together on the bottom half'
-  );
-  const before = (await readState(page)).scoreBottom; // 0 this early in the round
+  const pair = await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scene = (window as any).__game.scene.keys['Duel'];
+    scene.director.update = () => {};
+    for (const half of [scene.halves.top, scene.halves.bottom]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const item of [...half.items] as any[]) item.destroy();
+      half.items.clear();
+    }
+    scene.teamScore = 0;
+    scene.halves.top.hud.setScore(0);
+    scene.halves.bottom.hud.setScore(0);
+    scene.halves.bottom.spawn('bomb', 4);
+    scene.halves.bottom.spawn('tap', 0);
+    const items = [...scene.halves.bottom.items];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const toLiveItem = (item: any): LiveItem => ({
+      x: item.x,
+      y: item.y,
+      cell: item.cellIndex,
+      type: item.itemType,
+      lifeMs: item.lifeMs,
+    });
+    return {
+      bomb: toLiveItem(items.find((item) => item.itemType === 'bomb')),
+      target: toLiveItem(items.find((item) => item.itemType === 'tap')),
+    };
+  });
+  const beforeState = await readState(page);
+  const before = beforeState.scoreTeam; // 0 this early in the round
 
   await tapItem(page, pair.bomb);
   await page.waitForTimeout(120);
-  const afterBomb = (await readState(page)).scoreBottom;
+  const afterBombState = await readState(page);
+  const afterBomb = afterBombState.scoreTeam;
   expect(afterBomb).toBeGreaterThanOrEqual(0); // clamp — never goes negative
   expect(afterBomb).toBeLessThanOrEqual(before); // a bomb never scores points
+  expect(afterBombState.mistakesBottom).toBe(beforeState.mistakesBottom + 1);
+  expect(afterBombState.mistakesTop).toBe(beforeState.mistakesTop);
+  expect(afterBombState.hudScoreTop).toBe(String(afterBomb));
+  expect(afterBombState.hudScoreBottom).toBe(String(afterBomb));
 
   // A tap on a real target during the stun window is ignored.
   await tapItem(page, pair.target);
   await page.waitForTimeout(150);
-  expect((await readState(page)).scoreBottom).toBe(afterBomb);
+  expect((await readState(page)).scoreTeam).toBe(afterBomb);
 });
 
 test('a missed (expired) target costs nothing', async ({ page }) => {
   await startRound(page);
   await waitForLiveItem(page, 'bottom', 'tap'); // ensure a target is up...
-  const before = (await readState(page)).scoreBottom;
+  const before = (await readState(page)).scoreTeam;
 
   // ...then never tap it; let it age out (tap lifeMs 1800 + blink + despawn).
   await page.waitForTimeout(2500);
 
   const after = await readState(page);
   expect(after.phase).toBe('play'); // still mid-round
-  expect(after.scoreBottom).toBe(before); // expiry is free
+  expect(after.scoreTeam).toBe(before); // expiry is free
 });
 
 test('clean play advances target CPS and lowers the spawn gap', async ({ page }) => {
@@ -236,6 +281,20 @@ test('clean play advances target CPS and lowers the spawn gap', async ({ page })
   const after = (await readState(page)).difficulty.bottom;
   expect(after.targetCps).toBeGreaterThan(before.targetCps);
   expect(after.spawnGapMs).toBeLessThan(before.spawnGapMs);
+});
+
+test('clean play reaches the high CPS ceiling by about 20 seconds', async ({ page }) => {
+  await startRound(page);
+
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scene = (window as any).__game.scene.keys['Duel'];
+    for (let i = 0; i < 200; i++) scene.director.update(100);
+  });
+
+  const after = (await readState(page)).difficulty.bottom;
+  expect(after.targetCps).toBeGreaterThanOrEqual(3.95);
+  expect(after.spawnGapMs).toBeLessThanOrEqual(400);
 });
 
 test('bomb tap resets only that player CPS velocity', async ({ page }) => {
@@ -254,14 +313,18 @@ test('bomb tap resets only that player CPS velocity', async ({ page }) => {
     const item = [...scene.halves.bottom.items][0];
     return { x: item.x, y: item.y, cell: item.cellIndex, type: item.itemType, lifeMs: item.lifeMs };
   });
-  const before = (await readState(page)).difficulty;
+  const beforeState = await readState(page);
+  const before = beforeState.difficulty;
   expect(before.bottom.cpsVelocity).toBeGreaterThan(0);
   expect(before.top.cpsVelocity).toBeGreaterThan(0);
 
   await tapItem(page, bomb);
   await page.waitForTimeout(120);
 
-  const after = (await readState(page)).difficulty;
+  const afterState = await readState(page);
+  const after = afterState.difficulty;
+  expect(afterState.mistakesBottom).toBe(beforeState.mistakesBottom + 1);
+  expect(afterState.mistakesTop).toBe(beforeState.mistakesTop);
   expect(after.bottom.cpsVelocity).toBe(0);
   expect(after.top.cpsVelocity).toBeGreaterThan(0);
 });
@@ -280,10 +343,14 @@ test('expired non-bomb target resets only that player CPS velocity', async ({ pa
     }
     scene.halves.bottom.spawn('tap', 4);
   });
+  const beforeState = await readState(page);
 
   await page.waitForTimeout(2100);
 
-  const after = (await readState(page)).difficulty;
+  const afterState = await readState(page);
+  const after = afterState.difficulty;
+  expect(afterState.mistakesBottom).toBe(beforeState.mistakesBottom + 1);
+  expect(afterState.mistakesTop).toBe(beforeState.mistakesTop);
   expect(after.bottom.cpsVelocity).toBe(0);
   expect(after.top.cpsVelocity).toBeGreaterThan(0);
 });
@@ -302,11 +369,14 @@ test('expired bomb does not reset CPS velocity', async ({ page }) => {
     }
     scene.halves.bottom.spawn('bomb', 4);
   });
-  const before = (await readState(page)).difficulty.bottom.cpsVelocity;
+  const beforeState = await readState(page);
+  const before = beforeState.difficulty.bottom.cpsVelocity;
 
   await page.waitForTimeout(2500);
 
-  const after = (await readState(page)).difficulty.bottom.cpsVelocity;
+  const afterState = await readState(page);
+  const after = afterState.difficulty.bottom.cpsVelocity;
+  expect(afterState.mistakesBottom).toBe(beforeState.mistakesBottom);
   expect(after).toBeGreaterThanOrEqual(before);
 });
 
@@ -374,9 +444,10 @@ test('visual baselines for the deterministic screens', async ({ page }) => {
         item.destroy();
       }
       half.items.clear();
-      half.score = 0;
-      half.hud.setScore(0);
     }
+    scene.teamScore = 0;
+    scene.halves.top.hud.setScore(0);
+    scene.halves.bottom.hud.setScore(0);
     scene.endRound();
   });
   await page.waitForTimeout(400); // cards built

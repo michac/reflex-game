@@ -21,9 +21,6 @@ The bomb stun is a ~1s red flash + shake right now. Does a 5-year-old read "your
 ### R13 · Desktop scaling / theme fuzziness audit — `idea`
 Investigate how the Saturday Pop theming and procedural textures render when the game is run larger than the Pixel 6 logical canvas, especially on desktop. Are the visible fuzzy edges caused by browser/canvas scaling, texture generation resolution, Phaser render settings, or just expected antialiasing from the drawn shapes? Determine whether artifacts and strokes are authored/rendered in a way that scales cleanly, whether this is fixable with texture resolution / pixel ratio / canvas settings / vector-like redraws, and whether the perceived blur is material enough to prioritize.
 
-### R15 · Cooperative mode for adult + 5-year-old — `idea`
-Explore a cooperative scoring mode where both players contribute to one combined score without the child being crushed by adult-level difficulty. Let each side scale independently so the adult's board can get harder while the child's board remains playable. Candidate mechanics: linked items that the adult cannot complete until the child has hit the matching item, traps or hazards that affect the partner's board and require them to respond, and shared bonus chains that reward both players clearing mirrored items without making the child's misses dominate the result.
-
 ## Later
 
 ### R4 · Sound & juice — `idea` [draft]
@@ -33,10 +30,10 @@ Draft material: tap *pop* on a score; chunky *thud* on a bomb; rising pitch thro
 Draft material: **tap-and-hold** target; **golden target** (+5, very short lifetime); **letter/number targets** ("tap the 4!") for sneaky learning that fits the no-reading-required rule (he recognizes letters/numbers). Each needs a distinct, kid-legible look.
 
 ### R6 · Best-of-3 match flow — `idea`
-Wrap rounds into a match: a match-score strip on the divider, "win 2 of 3", a match-winner card. Turns one 60s round into a sit-down session.
+Wrap rounds into a short session: a team progress strip on the divider, best combined score or cumulative stars across 3 rounds, and a final team card. Turns one 60s round into a sit-down session.
 
-### R7 · Tie-breaker — `idea`
-Today an exact tie just shows "TIE!". Decide: sudden-death single target, or leave it a tie (probably fine at 5).
+### R7 · Star threshold tuning — `idea`
+Watch phone playtests and tune the 1-3 star thresholds so one star is always reachable, two stars feels like a clean round, and three stars is exciting without requiring adult-only speed.
 
 ### R8 · Working title — `idea`
 "Reflex Duel" is a placeholder — swap freely.
@@ -46,6 +43,8 @@ Mirror Star Slingers' B12: hide browser chrome on the Pixel (Fullscreen API on f
 
 ## Resolved
 
+- **R15 · Cooperative mode for adult + 5-year-old — `done`** *(2026-06-25)*. Replaced versus scoring with one shared team score shown on both HUDs. Completed targets on either half add to the team score; bomb taps subtract the shared `BOMB.penalty`, clamp at 0, and still stun/report a mistake only on the tapping half. Results now show `TEAM SCORE`, the final score, and a simple 1-3 star rating. V1 keeps independent adaptive difficulty and does not add linked targets, partner hazards, or bonus chains yet.
+- **R15 · Visible mistake/CPS HUD + faster adaptive ceiling — `done`** *(2026-06-25)*. Added always-visible per-player `ERR` and `CPS` readouts under the score/time HUD, counted mistakes for bomb taps and expired non-bomb targets, and exposed those counts through the Playwright state hook. Retuned adaptive pacing from 0.9→3.2 CPS to 1.15→4.0 CPS with higher acceleration/velocity, so clean play reaches the ceiling around 20s while mistakes still reset only that lane's CPS velocity.
 - **R14 · Mistake-sensitive difficulty ramp — `done`** *(2026-06-25)*. Replaced the mirrored time-only spawn stream with independent per-player lanes. Each lane tracks target decision-load CPS, CPS growth velocity, spawn timer, PRNG, and cell availability. Clean play accelerates that player's target CPS upward; tapping a bomb or letting a non-bomb target expire resets only that player's growth velocity. Spawn gaps come from expected decision load per spawn, item weights shift toward heavier targets as CPS rises, non-bomb lifetimes shrink to 75% at max CPS, and bomb expiry remains correct play.
 - **R12 · Port Saturday Pop cartoon style into the game — `done`** *(2026-06-25)*. Selected the Saturday Pop mock as the shipped skin and ported `plans/mockups/tokens-cartoon.css` into the playable Phaser build: sky field, dark ink linework, yellow/pink player targets, purple bombs, chunky filled procedural textures, cream/yellow stroked text, tokenized divider/results overlay, and refreshed Playwright visual baselines. Gameplay geometry, scoring, spawn timing, mirrored reservations, and input behavior unchanged.
 - **R9 · Style mockups for review — `done`** *(2026-06-23)*. Added six static style variants under `plans/mockups/`, all using the canonical mirrored 360×740 scene: **Electric Arcade** (`style-neon.html` + `tokens-neon.css`), **Sticker Pop** (`style-sticker.html` + `tokens-sticker.css`), **Sport Court** (`style-court.html` + `tokens-court.css`), **Signal Lab** (`style-signal.html` + `tokens-signal.css`), **Crayon Sketch** (`style-crayon.html` + `tokens-crayon.css`), and **Saturday Pop** (`style-cartoon.html` + `tokens-cartoon.css`). Added `style-gallery.html` to compare them via Vite. These began as review mocks; Saturday Pop was later selected and ported in R12.

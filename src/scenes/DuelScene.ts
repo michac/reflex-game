@@ -1,8 +1,8 @@
 /**
- * DuelScene — orchestrates the duel: ready-up, per-seat countdown, the
- * 60-second round, and the per-seat results card. All per-player behavior
- * lives in PlayerHalf; this scene only draws shared chrome, routes taps,
- * and runs the phase machine.
+ * DuelScene — orchestrates the cooperative round: ready-up, per-seat
+ * countdown, shared team score, and per-seat results card. Per-half behavior
+ * lives in PlayerHalf; this scene draws shared chrome, routes taps, and runs
+ * the phase machine.
  */
 import Phaser from 'phaser';
 import {
@@ -11,6 +11,7 @@ import {
   DIVIDER_Y,
   GAME_HEIGHT,
   GAME_WIDTH,
+  RESULT_STARS,
   RESULTS_LOCKOUT_MS,
   ROUND,
 } from '../layout';
@@ -26,6 +27,7 @@ export class DuelScene extends Phaser.Scene {
   private director!: SpawnDirector;
   private phase: Phase = 'ready';
   private remainingMs = ROUND.durationMs;
+  private teamScore = 0;
   private elapsedMs = 0; // scene clock, used for the results tap-lockout
   private resultsAtMs = 0;
   private ready = { top: false, bottom: false };
@@ -39,14 +41,25 @@ export class DuelScene extends Phaser.Scene {
     // re-init state explicitly — create() runs again on scene.restart()
     this.phase = 'ready';
     this.remainingMs = ROUND.durationMs;
+    this.teamScore = 0;
     this.elapsedMs = 0;
     this.ready = { top: false, bottom: false };
 
     generateTextures(this);
     this.drawDivider();
     this.halves = {
-      top: new PlayerHalf(this, 'top', () => this.director.reportMistake('top')),
-      bottom: new PlayerHalf(this, 'bottom', () => this.director.reportMistake('bottom')),
+      top: new PlayerHalf(
+        this,
+        'top',
+        () => this.director.reportMistake('top'),
+        (delta) => this.addTeamScore(delta)
+      ),
+      bottom: new PlayerHalf(
+        this,
+        'bottom',
+        () => this.director.reportMistake('bottom'),
+        (delta) => this.addTeamScore(delta)
+      ),
     };
     this.director = new SpawnDirector(this.halves);
 
@@ -68,6 +81,9 @@ export class DuelScene extends Phaser.Scene {
     this.halves.top.hud.setTime(this.remainingMs);
     this.halves.bottom.hud.setTime(this.remainingMs);
     this.director.update(delta);
+    const difficulty = this.director.debugState();
+    this.halves.top.hud.setCps(difficulty.top.targetCps);
+    this.halves.bottom.hud.setCps(difficulty.bottom.targetCps);
 
     if (this.remainingMs <= 0) this.endRound();
   }
@@ -154,17 +170,15 @@ export class DuelScene extends Phaser.Scene {
       COLORS.line,
       STROKES.overlay.resultDimAlpha
     );
-    this.showResults('top', this.halves.top.score, this.halves.bottom.score);
-    this.showResults('bottom', this.halves.bottom.score, this.halves.top.score);
+    this.showResults('top');
+    this.showResults('bottom');
   }
 
   /** One seat's result card, in a fresh rotated container so it sits above
    *  the dim and reads toward its player. */
-  private showResults(seat: Seat, mine: number, theirs: number): void {
+  private showResults(seat: Seat): void {
     const c = this.add.container(seat === 'top' ? GAME_WIDTH : 0, DIVIDER_Y);
     if (seat === 'top') c.setAngle(180);
-    // "SO CLOSE!" instead of "you lose" — kept warm for the 5-year-old
-    const verdict = mine > theirs ? 'YOU WIN!' : mine < theirs ? 'SO CLOSE!' : 'TIE!';
     const color = seat === 'top' ? CSS.p1 : CSS.p2;
     const text = (y: number, str: string, size: number, col: string, display = false) =>
       this.add
@@ -178,10 +192,27 @@ export class DuelScene extends Phaser.Scene {
         })
         .setOrigin(0.5);
     c.add([
-      text(110, verdict, 34, color),
-      text(165, `${mine} - ${theirs}`, 24, CSS.cream, true),
-      text(215, 'tap to play again', 13, CSS.chromeMuted),
+      text(105, 'TEAM SCORE', 30, color),
+      text(155, String(this.teamScore), 34, CSS.cream, true),
+      text(202, this.starText(), 20, CSS.accent, true),
+      text(235, 'tap to play again', 13, CSS.chromeMuted),
     ]);
+  }
+
+  private addTeamScore(delta: number): void {
+    this.teamScore = Math.max(0, this.teamScore + delta);
+    this.halves.top.hud.setScore(this.teamScore);
+    this.halves.bottom.hud.setScore(this.teamScore);
+  }
+
+  private starText(): string {
+    const stars =
+      this.teamScore >= RESULT_STARS.threeStarScore
+        ? 3
+        : this.teamScore >= RESULT_STARS.twoStarScore
+          ? 2
+          : 1;
+    return `${stars} ${stars === 1 ? 'STAR' : 'STARS'}`;
   }
 
   // ---- chrome ----

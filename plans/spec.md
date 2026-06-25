@@ -6,21 +6,21 @@
 > The work queue (including unbuilt ideas) is [`backlog.md`](backlog.md); origin and history live in [`notes.md`](notes.md).
 
 ## 1. Pitch
-Two players sit facing each other across a phone held in portrait, one at the top edge and one at the bottom. The screen splits in half; targets pop into a 3×3 grid on each player's half. Tap your targets fast, finish the numbered multi-tap ones, and never tap a bomb. Most points when the 60-second clock runs out wins.
+Two players sit facing each other across a phone held in portrait, one at the top edge and one at the bottom. The screen splits in half; targets pop into a 3×3 grid on each player's half. Tap your targets fast, finish the numbered multi-tap ones, never tap a bomb, and build one shared team score before the 60-second clock runs out.
 
 ## 2. Players & setup
-- **2 players**, simultaneous **versus** play on one phone (designed for a parent + the 5-year-old).
+- **2 players**, simultaneous **cooperative** play on one phone (designed for a parent + the 5-year-old).
 - **Device:** Pixel 6, laid flat in **portrait**, players **facing each other** — one at the top short edge, one at the bottom. Each player only taps inside their own half.
 - **P1 (top) plays upside-down by design:** the whole top half — grid, HUD, countdown, score pops, results card — is rotated 180° so it reads right-side-up for the top player.
 - Simultaneous multitouch confirmed fine on the device (`activePointers: 5`).
 - **No reading required** — everything is shapes, motion, and a few small numbers.
 
 ## 3. The goal
-Score more points than the other player before the timer ends. **Nobody dies** — the worst outcome is a lower number, kept gentle for a 5-year-old (the loser's card says "SO CLOSE!", never "you lose").
+Work together for the highest team score before the timer ends. **Nobody dies and nobody loses to the other player** — the results card shows the shared score and a simple 1-3 star rating.
 
 ## 4. Field & layout (built)
 - Logical field **360×740** (≈ Pixel 6 portrait), ported 1:1 from the canonical wireframe mock.
-- **Divider band** across the middle (y=370). Each half, reading from the divider toward the player's edge: a slim **HUD row** (SCORE left, TIME right), then a **3×3 grid** of 100px cells (gap 8, corner radius 14).
+- **Divider band** across the middle (y=370). Each half, reading from the divider toward the player's edge: a slim **HUD row** (TEAM score left, TIME right), then a **3×3 grid** of 100px cells (gap 8, corner radius 14).
 - The top half is the bottom half's layout **rotated 180° about screen center (180,370)** — one set of geometry constants lays out both halves (each half is a Phaser container whose origin sits on the divider; P1's is rotated). This rotation *is* the design, not a cosmetic flourish.
 - **Canonical layout mock:** [`mockups/style-wireframe.html`](mockups/style-wireframe.html) (v1). The playfield is defined once in the mock and rendered twice (the P1 copy is the same `<use>` rotated 180°), exactly mirroring how the game builds the two halves.
 - **Shipped skin:** the playable game now uses the **Saturday Pop** visual direction from [`mockups/style-cartoon.html`](mockups/style-cartoon.html) / [`mockups/tokens-cartoon.css`](mockups/tokens-cartoon.css): sky field, dark cartoon ink, yellow P1, pink P2, purple bombs, cream/yellow HUD text, filled chunky targets, and translucent rounded grid cells.
@@ -30,31 +30,33 @@ Score more points than the other player before the timer ends. **Nobody dies** �
 - Each player has an independent spawn lane: its own PRNG, cell availability, spawn timer, target difficulty, and current item mix.
 - Difficulty is modeled as **decision-load CPS**. Clean play lets that player's target CPS accelerate upward; a mistake resets only that player's CPS growth velocity to zero, pausing the climb until clean time rebuilds it.
 - Mistakes are tapping a bomb or letting a non-bomb target expire. Letting a bomb expire is correct play and does not reset difficulty.
+- Each player's HUD always shows current mistake count (`ERR`) and live target CPS (`CPS`) so adaptive pacing is inspectable during playtests.
 - Cells are reserved per half until the item has fully despawned, so a board never stacks two items in the same cell.
-- Current scoring remains competitive and symmetric: hits score points, bomb taps penalize/stun, expired targets cost no score.
+- Scoring is shared: hits add to the team score, bomb taps subtract from the team score, and expired targets cost no score.
 
 ## 6. Items & scoring (built)
 - **Single-tap target** — tap before it vanishes: **+1**.
 - **Double-tap target** — shows **2**, counts down per tap, **+2** when finished (no partial credit — finishing is the skill).
 - **Triple-tap target** — shows **3**, **+3** when finished.
-- **Bomb** — must be left alone. Tapping it costs **−3** and **stuns that half ~1s** (red flash + camera shake; taps ignored during the stun). Score never drops below 0.
+- **Bomb** — must be left alone. Tapping it costs the team **−3** and **stuns only that half ~1s** (red flash + camera shake; taps ignored during the stun). Team score never drops below 0.
 - Missing a target (letting it expire) costs **nothing** — gentle at 5; only bombs punish.
-- **Numbers everywhere a 5-year-old can read them:** taps-remaining on items, the countdown clock, both scores, the 3-2-1 start.
+- **Numbers everywhere a 5-year-old can read them:** taps-remaining on items, the countdown clock, the shared team score on both HUDs, the 3-2-1 start.
 
 ## 7. Pacing (built)
 - Round is **60 seconds**.
-- Each player starts at **0.9 target CPS** and can climb to **3.2 target CPS**. CPS velocity accelerates during clean play up to **0.16 CPS/sec**; mistakes reset velocity to zero without lowering the current target CPS.
+- Each player starts at **1.15 target CPS** and can climb to **4.0 target CPS**. CPS velocity accelerates during clean play up to **0.24 CPS/sec**; mistakes reset velocity to zero without lowering the current target CPS.
+- A clean lane can reach the 4.0 CPS ceiling at about **20 seconds**, dropping the derived spawn gap to roughly **390ms** at the hard item mix.
 - Spawn gap is derived from expected decision load per spawn: tap = 1, double = 2, triple = 3, bomb = 0.6. As target CPS rises, the gap shrinks, the item mix shifts from mostly simple taps toward more multi-tap targets, and non-bomb lifetimes scale down to **75%** of their base value.
 - Base item lifetimes: single ~1.8s, double ~2.6s, triple ~3.2s, bomb ~2.2s. Bomb lifetime does not shrink, so ignoring bombs remains valid play.
 - Items **blink as a warning** near expiry, so a vanishing target never feels like a cheat.
 - The clock **pulses on both HUDs through the last 5 seconds**.
-- No pre-game handicap yet. Per-player adaptive difficulty is the foundation for future fairness/co-op tuning, but the current result is still a versus score race.
+- No pre-game handicap yet. Independent per-player adaptive difficulty is the fairness lever for co-op v1: the adult's board can keep climbing while the child's board pauses after mistakes.
 
 ## 8. Feel / juice (built)
 - Pop-in bounce on spawn (Back.easeOut scale); quick squash on each multi-tap.
 - Ripple ring + floating "+1/+2/+3" on a score; floating "−3" on a bomb.
 - Bomb tap: half-screen red flash + camera shake.
-- Per-seat results card ("YOU WIN!" / "SO CLOSE!" / "TIE!"), readable from each seat.
+- Per-seat results card ("TEAM SCORE", final score, 1-3 star rating), readable from each seat.
 - Sound is **not yet built** (backlog R4).
 
 ## 9. Round flow (built)

@@ -41,6 +41,16 @@ Selected **Saturday Pop** as the shipped visual direction and ported `plans/mock
 
 Gameplay stayed intentionally untouched: same 360x740 geometry, mirrored spawn stream, cell reservation behavior, scoring, timing, input routing, and no external art assets. Verification target for this change is `npm run typecheck`, `npm run build`, `npm run test:update` for the intentional visual baseline change, then `npm test`. Pushing `main` deploys the Saturday Pop build to GitHub Pages for phone testing at https://michac.github.io/reflex-game/ .
 
+## R15 — mistake/CPS HUD and faster ceiling (2026-06-25)
+
+Added always-visible `ERR` and `CPS` HUD readouts per player to make playtests easier to interpret without a debug overlay. Mistake counting now lives in `PlayerHalf` and uses the same definition as the adaptive reset: bomb tap or expired non-bomb target; expired bombs remain correct play. Retuned clean adaptive growth to start at 1.15 target CPS, cap at 4.0, and reach that ceiling around the 20-second mark with mistake-free play.
+
+## R15 — cooperative team score (2026-06-25)
+
+Converted the round from parent-vs-child comparison into a cooperative team-score game. The shared score keeps the same fast target and bomb vocabulary, but removes the end-of-round pressure of the adult directly beating the child. Independent adaptive lanes remain the core fairness mechanism: the adult's side can keep accelerating while the child's side can recover after mistakes without dragging down both boards.
+
+V1 deliberately stays small: completed targets from either half add to the same score, bomb taps subtract the shared penalty while stunning only the tapping half, both HUDs show the same `TEAM` score plus per-half `ERR`/`CPS`, and the results card shows the final score with a 1-3 star rating. Linked targets, partner hazards, and shared bonus chains stay unbuilt until phone playtests show whether the basic co-op loop needs more interdependence.
+
 ## R14 — per-player CPS difficulty (2026-06-25)
 
 Dropped mirrored spawns in favor of independent per-player adaptive boards. Mirroring was clean for a pure reflex race, but it tied both players to the same difficulty curve; per-player decision-load CPS is a better foundation for the future cooperative mode because the adult's board can keep accelerating while the child's board pauses after mistakes. Mistakes are bomb taps and expired non-bomb targets; bomb expiry is correct play. Current scoring/results stay versus for now.

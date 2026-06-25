@@ -26,21 +26,28 @@ export class PlayerHalf {
   readonly seat: Seat;
   readonly container: Phaser.GameObjects.Container;
   readonly hud: Hud;
-  score = 0;
+  mistakes = 0;
 
   private readonly scene: Phaser.Scene;
   private readonly player: PlayerKey;
   private readonly onMistake: () => void;
+  private readonly onScoreDelta: (delta: number) => void;
   private readonly items = new Set<Item>();
   private readonly flash: Phaser.GameObjects.Rectangle;
   private stunnedUntil = 0;
   private nowMs = 0;
 
-  constructor(scene: Phaser.Scene, seat: Seat, onMistake: () => void = () => {}) {
+  constructor(
+    scene: Phaser.Scene,
+    seat: Seat,
+    onMistake: () => void = () => {},
+    onScoreDelta: (delta: number) => void = () => {}
+  ) {
     this.scene = scene;
     this.seat = seat;
     this.player = seat === 'top' ? 'p1' : 'p2';
     this.onMistake = onMistake;
+    this.onScoreDelta = onScoreDelta;
 
     // Bottom container at (0, divider); top at (W, divider) rotated 180° —
     // local (x, y) maps to screen (W - x, divider - y) for the top seat.
@@ -106,14 +113,12 @@ export class PlayerHalf {
     const { x, y } = hit;
     const result = hit.tap();
     if (result.kind === 'bomb') {
-      this.onMistake();
-      this.score = Math.max(0, this.score - BOMB.penalty); // never below 0 — gentle at 5
-      this.hud.setScore(this.score);
+      this.reportMistake();
+      this.onScoreDelta(-BOMB.penalty);
       this.popText(x, y, `-${BOMB.penalty}`);
       this.stun();
     } else if (result.kind === 'complete') {
-      this.score += result.points;
-      this.hud.setScore(this.score);
+      this.onScoreDelta(result.points);
       this.ripple(x, y);
       this.popText(x, y - 26, `+${result.points}`);
     } else {
@@ -140,7 +145,13 @@ export class PlayerHalf {
 
   private onItemGone(item: Item, reason: GoneReason): void {
     this.items.delete(item);
-    if (reason === 'expired' && item.itemType !== 'bomb') this.onMistake();
+    if (reason === 'expired' && item.itemType !== 'bomb') this.reportMistake();
+  }
+
+  private reportMistake(): void {
+    this.mistakes += 1;
+    this.hud.setMistakes(this.mistakes);
+    this.onMistake();
   }
 
   private ripple(x: number, y: number): void {
