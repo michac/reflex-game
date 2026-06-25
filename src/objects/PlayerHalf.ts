@@ -17,7 +17,7 @@ import {
 } from '../layout';
 import { COLORS, CSS, FONTS, STROKES } from '../tokens';
 import { Hud } from './Hud';
-import { Item } from './Item';
+import { Item, type GoneReason } from './Item';
 import { TEX, type PlayerKey } from './textures';
 
 export type Seat = 'top' | 'bottom';
@@ -30,15 +30,17 @@ export class PlayerHalf {
 
   private readonly scene: Phaser.Scene;
   private readonly player: PlayerKey;
+  private readonly onMistake: () => void;
   private readonly items = new Set<Item>();
   private readonly flash: Phaser.GameObjects.Rectangle;
   private stunnedUntil = 0;
   private nowMs = 0;
 
-  constructor(scene: Phaser.Scene, seat: Seat) {
+  constructor(scene: Phaser.Scene, seat: Seat, onMistake: () => void = () => {}) {
     this.scene = scene;
     this.seat = seat;
     this.player = seat === 'top' ? 'p1' : 'p2';
+    this.onMistake = onMistake;
 
     // Bottom container at (0, divider); top at (W, divider) rotated 180° —
     // local (x, y) maps to screen (W - x, divider - y) for the top seat.
@@ -63,20 +65,20 @@ export class PlayerHalf {
     this.container.add(this.flash);
   }
 
-  /** Per-cell freedom — the SpawnDirector intersects both halves so the
-   *  mirrored stream only uses cells empty on BOTH sides. */
+  /** Per-cell freedom for this half. Fading items keep their cell reserved. */
   freeCells(): boolean[] {
     const free = new Array<boolean>(CELL_COUNT).fill(true);
     for (const item of this.items) {
-      if (item.isLive) free[item.cellIndex] = false;
+      free[item.cellIndex] = false;
     }
     return free;
   }
 
-  spawn(itemType: ItemType, cellIndex: number): void {
+  spawn(itemType: ItemType, cellIndex: number, lifeScale = 1): void {
     const c = cellCenter(cellIndex);
-    const item = new Item(this.scene, c.x, c.y, itemType, cellIndex, this.player, (it) =>
-      this.items.delete(it)
+    const item = new Item(this.scene, c.x, c.y, itemType, cellIndex, this.player, (it, reason) =>
+      this.onItemGone(it, reason),
+      lifeScale
     );
     this.items.add(item);
     this.container.add(item);
@@ -104,6 +106,7 @@ export class PlayerHalf {
     const { x, y } = hit;
     const result = hit.tap();
     if (result.kind === 'bomb') {
+      this.onMistake();
       this.score = Math.max(0, this.score - BOMB.penalty); // never below 0 — gentle at 5
       this.hud.setScore(this.score);
       this.popText(x, y, `-${BOMB.penalty}`);
@@ -133,6 +136,11 @@ export class PlayerHalf {
       ease: 'Sine.easeOut',
     });
     this.scene.cameras.main.shake(120, 0.004);
+  }
+
+  private onItemGone(item: Item, reason: GoneReason): void {
+    this.items.delete(item);
+    if (reason === 'expired' && item.itemType !== 'bomb') this.onMistake();
   }
 
   private ripple(x: number, y: number): void {

@@ -33,6 +33,7 @@ export default defineConfig({
         // software GL so the game actually renders.
         launchOptions: {
           args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+          executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
         },
       },
     },

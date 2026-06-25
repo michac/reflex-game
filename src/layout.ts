@@ -71,19 +71,19 @@ export const BOMB = { penalty: 3, stunMs: 1000 } as const;
 
 export const ROUND = { durationMs: 60_000, countdownFrom: 3 } as const;
 
-/**
- * Mirrored spawn pacing: one stream drives both halves. The gap between
- * spawns ramps linearly across the round.
- */
+/** Per-player adaptive spawn pacing, expressed as decision-load CPS. */
 export const SPAWN = {
-  startGapMs: 1200, // a calm opening...
-  endGapMs: 350, // ...sprinting to ~3.4x the spawn rate by the end
-  // Ramp curve: gap = lerp(start, end, t**rampExp), t = round progress 0->1.
-  // rampExp 1 = linear; >1 back-loads the acceleration so it stays easy early
-  // and turns frantic in the final stretch.
-  rampExp: 2.2,
-  retryGapMs: 150, // wait when no cell is free on BOTH halves
-  weights: { tap: 0.62, multi2: 0.15, multi3: 0.08, bomb: 0.15 },
+  startCps: 0.9,
+  maxCps: 3.2,
+  maxCpsVelocity: 0.16, // CPS/sec
+  cpsAcceleration: 0.015, // CPS/sec^2
+  minGapMs: 240,
+  maxGapMs: 1400,
+  retryGapMs: 150, // wait when no cell is free on this half
+  loadCost: { tap: 1, multi2: 2, multi3: 3, bomb: 0.6 },
+  easyWeights: { tap: 0.68, multi2: 0.12, multi3: 0.05, bomb: 0.15 },
+  hardWeights: { tap: 0.42, multi2: 0.25, multi3: 0.18, bomb: 0.15 },
+  minTargetLifeScale: 0.75,
 } as const;
 
 /** Results card: ignore taps briefly so the loser's last tap can't skip it. */

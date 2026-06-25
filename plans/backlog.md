@@ -18,6 +18,12 @@ Is 60s right for a 5-year-old's attention span, or better at 45s? Tune by watchi
 ### R3 · Stun readability — `idea`
 The bomb stun is a ~1s red flash + shake right now. Does a 5-year-old read "your taps are frozen"? May need a big "WAIT!" icon during the stun. Decide on the phone.
 
+### R13 · Desktop scaling / theme fuzziness audit — `idea`
+Investigate how the Saturday Pop theming and procedural textures render when the game is run larger than the Pixel 6 logical canvas, especially on desktop. Are the visible fuzzy edges caused by browser/canvas scaling, texture generation resolution, Phaser render settings, or just expected antialiasing from the drawn shapes? Determine whether artifacts and strokes are authored/rendered in a way that scales cleanly, whether this is fixable with texture resolution / pixel ratio / canvas settings / vector-like redraws, and whether the perceived blur is material enough to prioritize.
+
+### R15 · Cooperative mode for adult + 5-year-old — `idea`
+Explore a cooperative scoring mode where both players contribute to one combined score without the child being crushed by adult-level difficulty. Let each side scale independently so the adult's board can get harder while the child's board remains playable. Candidate mechanics: linked items that the adult cannot complete until the child has hit the matching item, traps or hazards that affect the partner's board and require them to respond, and shared bonus chains that reward both players clearing mirrored items without making the child's misses dominate the result.
+
 ## Later
 
 ### R4 · Sound & juice — `idea` [draft]
@@ -40,6 +46,7 @@ Mirror Star Slingers' B12: hide browser chrome on the Pixel (Fullscreen API on f
 
 ## Resolved
 
+- **R14 · Mistake-sensitive difficulty ramp — `done`** *(2026-06-25)*. Replaced the mirrored time-only spawn stream with independent per-player lanes. Each lane tracks target decision-load CPS, CPS growth velocity, spawn timer, PRNG, and cell availability. Clean play accelerates that player's target CPS upward; tapping a bomb or letting a non-bomb target expire resets only that player's growth velocity. Spawn gaps come from expected decision load per spawn, item weights shift toward heavier targets as CPS rises, non-bomb lifetimes shrink to 75% at max CPS, and bomb expiry remains correct play.
 - **R12 · Port Saturday Pop cartoon style into the game — `done`** *(2026-06-25)*. Selected the Saturday Pop mock as the shipped skin and ported `plans/mockups/tokens-cartoon.css` into the playable Phaser build: sky field, dark ink linework, yellow/pink player targets, purple bombs, chunky filled procedural textures, cream/yellow stroked text, tokenized divider/results overlay, and refreshed Playwright visual baselines. Gameplay geometry, scoring, spawn timing, mirrored reservations, and input behavior unchanged.
 - **R9 · Style mockups for review — `done`** *(2026-06-23)*. Added six static style variants under `plans/mockups/`, all using the canonical mirrored 360×740 scene: **Electric Arcade** (`style-neon.html` + `tokens-neon.css`), **Sticker Pop** (`style-sticker.html` + `tokens-sticker.css`), **Sport Court** (`style-court.html` + `tokens-court.css`), **Signal Lab** (`style-signal.html` + `tokens-signal.css`), **Crayon Sketch** (`style-crayon.html` + `tokens-crayon.css`), and **Saturday Pop** (`style-cartoon.html` + `tokens-cartoon.css`). Added `style-gallery.html` to compare them via Vite. These began as review mocks; Saturday Pop was later selected and ported in R12.
 - **R11 · Steeper, back-loaded spawn ramp — `done`** *(2026-06-07)*. The spawn-rate ramp was a shallow linear 1.1s→0.55s. Made it more frantic at the end: `startGapMs` 1100→1200, `endGapMs` 550→350, and added `SPAWN.rampExp` (2.2) so the gap eases as `t**rampExp` — a calm opening that back-loads the acceleration into the final stretch (gaps ~1015ms at 30s, 526ms at 54s, 350ms at the buzzer; ~3.4× the opening rate). One curve constant in `src/layout.ts`; `rampExp: 1` restores linear. Item lifetimes unchanged.

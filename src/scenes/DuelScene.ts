@@ -1,5 +1,5 @@
 /**
- * DuelScene — orchestrates the duel: ready-up, mirrored countdown, the
+ * DuelScene — orchestrates the duel: ready-up, per-seat countdown, the
  * 60-second round, and the per-seat results card. All per-player behavior
  * lives in PlayerHalf; this scene only draws shared chrome, routes taps,
  * and runs the phase machine.
@@ -45,10 +45,10 @@ export class DuelScene extends Phaser.Scene {
     generateTextures(this);
     this.drawDivider();
     this.halves = {
-      top: new PlayerHalf(this, 'top'),
-      bottom: new PlayerHalf(this, 'bottom'),
+      top: new PlayerHalf(this, 'top', () => this.director.reportMistake('top')),
+      bottom: new PlayerHalf(this, 'bottom', () => this.director.reportMistake('bottom')),
     };
-    this.director = new SpawnDirector([this.halves.top, this.halves.bottom]);
+    this.director = new SpawnDirector(this.halves);
 
     this.readyTexts = {
       top: this.addSeatText('top', 170, 'TAP WHEN READY', 22, CSS.p1),

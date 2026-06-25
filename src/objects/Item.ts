@@ -12,6 +12,7 @@ export type TapResult =
   | { kind: 'bomb' }
   | { kind: 'progress'; tapsLeft: number }
   | { kind: 'complete'; points: number };
+export type GoneReason = 'scored' | 'expired' | 'explode';
 
 export class Item extends Phaser.GameObjects.Container {
   readonly cellIndex: number;
@@ -21,7 +22,7 @@ export class Item extends Phaser.GameObjects.Container {
   private ageMs = 0;
   private dying = false;
   private readonly countText?: Phaser.GameObjects.Text;
-  private readonly onGone: (item: Item) => void;
+  private readonly onGone: (item: Item, reason: GoneReason) => void;
 
   constructor(
     scene: Phaser.Scene,
@@ -30,7 +31,8 @@ export class Item extends Phaser.GameObjects.Container {
     itemType: ItemType,
     cellIndex: number,
     player: PlayerKey,
-    onGone: (item: Item) => void
+    onGone: (item: Item, reason: GoneReason) => void,
+    lifeScale = 1
   ) {
     super(scene, x, y);
     this.itemType = itemType;
@@ -38,7 +40,7 @@ export class Item extends Phaser.GameObjects.Container {
     this.onGone = onGone;
     const def = ITEM_DEFS[itemType];
     this.tapsLeft = def.taps;
-    this.lifeMs = def.lifeMs;
+    this.lifeMs = itemType === 'bomb' ? def.lifeMs : def.lifeMs * lifeScale;
 
     const texKey =
       itemType === 'bomb' ? TEX.bomb : def.taps > 1 ? TEX.multi(player) : TEX.target(player);
@@ -101,9 +103,9 @@ export class Item extends Phaser.GameObjects.Container {
     }
   }
 
-  private vanish(how: 'scored' | 'expired' | 'explode'): void {
+  private vanish(how: GoneReason): void {
     if (this.dying) return;
-    this.dying = true; // frees the cell for the SpawnDirector immediately
+    this.dying = true; // stops hit tests; PlayerHalf keeps the cell reserved until onGone
     const cfg =
       how === 'scored'
         ? { scale: 1.3, alpha: 0, duration: ITEM.despawnMs }
@@ -115,7 +117,7 @@ export class Item extends Phaser.GameObjects.Container {
       ...cfg,
       ease: 'Sine.easeIn',
       onComplete: () => {
-        this.onGone(this);
+        this.onGone(this, how);
         this.destroy();
       },
     });

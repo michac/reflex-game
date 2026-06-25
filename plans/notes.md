@@ -41,6 +41,10 @@ Selected **Saturday Pop** as the shipped visual direction and ported `plans/mock
 
 Gameplay stayed intentionally untouched: same 360x740 geometry, mirrored spawn stream, cell reservation behavior, scoring, timing, input routing, and no external art assets. Verification target for this change is `npm run typecheck`, `npm run build`, `npm run test:update` for the intentional visual baseline change, then `npm test`. Pushing `main` deploys the Saturday Pop build to GitHub Pages for phone testing at https://michac.github.io/reflex-game/ .
 
+## R14 — per-player CPS difficulty (2026-06-25)
+
+Dropped mirrored spawns in favor of independent per-player adaptive boards. Mirroring was clean for a pure reflex race, but it tied both players to the same difficulty curve; per-player decision-load CPS is a better foundation for the future cooperative mode because the adult's board can keep accelerating while the child's board pauses after mistakes. Mistakes are bomb taps and expired non-bomb targets; bomb expiry is correct play. Current scoring/results stay versus for now.
+
 ## Doc model adopted (2026-06-07)
 
 Initially wrote a single design-template `spec.md`. Restructured to Star Slingers' three-doc model at Michael's prompt: `spec.md` slimmed to **current built truth**, this `notes.md` created for history, `backlog.md` created as the work queue (items R1–R10 + the resolved R0). Same standing flow as SS: record wants in the backlog first, work one at a time, sync the spec + append history as part of finishing.

@@ -26,10 +26,12 @@ Score more points than the other player before the timer ends. **Nobody dies** �
 - **Shipped skin:** the playable game now uses the **Saturday Pop** visual direction from [`mockups/style-cartoon.html`](mockups/style-cartoon.html) / [`mockups/tokens-cartoon.css`](mockups/tokens-cartoon.css): sky field, dark cartoon ink, yellow P1, pink P2, purple bombs, cream/yellow HUD text, filled chunky targets, and translucent rounded grid cells.
 - **Style review gallery:** [`mockups/style-gallery.html`](mockups/style-gallery.html) compares six visual directions: Electric Arcade, Sticker Pop, Sport Court, Signal Lab, Crayon Sketch, and Saturday Pop. These remain reference mocks; Saturday Pop is the selected direction currently ported into [`../src/tokens.ts`](../src/tokens.ts).
 
-## 5. Mirrored spawns (the core fairness call)
-- **One spawn stream drives both halves** — the same item type, in the same cell, at the same instant, on both sides (a `SpawnDirector` with a seeded PRNG).
-- A pure reflex comparison: no luck complaints, and the parent can glance at the kid's identical board to coach ("don't touch that one!").
-- A cell is eligible only while it's free on **both** halves — a tapped-away item leaves its cell reserved until its twin resolves too, so the boards never desync.
+## 5. Independent adaptive boards (built)
+- Each player has an independent spawn lane: its own PRNG, cell availability, spawn timer, target difficulty, and current item mix.
+- Difficulty is modeled as **decision-load CPS**. Clean play lets that player's target CPS accelerate upward; a mistake resets only that player's CPS growth velocity to zero, pausing the climb until clean time rebuilds it.
+- Mistakes are tapping a bomb or letting a non-bomb target expire. Letting a bomb expire is correct play and does not reset difficulty.
+- Cells are reserved per half until the item has fully despawned, so a board never stacks two items in the same cell.
+- Current scoring remains competitive and symmetric: hits score points, bomb taps penalize/stun, expired targets cost no score.
 
 ## 6. Items & scoring (built)
 - **Single-tap target** — tap before it vanishes: **+1**.
@@ -41,11 +43,12 @@ Score more points than the other player before the timer ends. **Nobody dies** �
 
 ## 7. Pacing (built)
 - Round is **60 seconds**.
-- Spawn gap ramps **1.2s → 0.35s** across the round, **eased to back-load the acceleration** (`SPAWN.rampExp`): a calm opening (~1s gaps through the first 30s), turning frantic in the final ~15s (~0.5s at 54s, 0.35s at the buzzer — roughly 3.4× the opening rate). Tune via `startGapMs`/`endGapMs`/`rampExp` in `src/layout.ts`.
-- Item lifetimes: single ~1.8s, double ~2.6s, triple ~3.2s, bomb ~2.2s.
+- Each player starts at **0.9 target CPS** and can climb to **3.2 target CPS**. CPS velocity accelerates during clean play up to **0.16 CPS/sec**; mistakes reset velocity to zero without lowering the current target CPS.
+- Spawn gap is derived from expected decision load per spawn: tap = 1, double = 2, triple = 3, bomb = 0.6. As target CPS rises, the gap shrinks, the item mix shifts from mostly simple taps toward more multi-tap targets, and non-bomb lifetimes scale down to **75%** of their base value.
+- Base item lifetimes: single ~1.8s, double ~2.6s, triple ~3.2s, bomb ~2.2s. Bomb lifetime does not shrink, so ignoring bombs remains valid play.
 - Items **blink as a warning** near expiry, so a vanishing target never feels like a cheat.
 - The clock **pulses on both HUDs through the last 5 seconds**.
-- **No handicap in v1** — symmetric rules for both seats. Fairness across the age gap is deferred to playtesting (backlog R1).
+- No pre-game handicap yet. Per-player adaptive difficulty is the foundation for future fairness/co-op tuning, but the current result is still a versus score race.
 
 ## 8. Feel / juice (built)
 - Pop-in bounce on spawn (Back.easeOut scale); quick squash on each multi-tap.
@@ -57,7 +60,7 @@ Score more points than the other player before the timer ends. **Nobody dies** �
 ## 9. Round flow (built)
 `ready` → `countdown` → `play` → `results`, a small phase machine in `DuelScene`:
 1. Both players tap their half to ready up ("TAP WHEN READY" → "READY!").
-2. Mirrored **3-2-1-GO!** countdown (pops per step).
+2. Per-seat **3-2-1-GO!** countdown (pops per step).
 3. 60-second **play** phase (spawns, taps, scoring, stuns).
 4. **Results**: dim + per-seat card; tap to play again (a ~600ms lockout stops a frantic last tap from skipping it). Restart re-inits all state.
 

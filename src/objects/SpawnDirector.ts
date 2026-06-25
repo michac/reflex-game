@@ -1,12 +1,22 @@
 /**
- * SpawnDirector.ts — the mirrored spawn stream. ONE random event stream
- * drives BOTH halves: same item, same cell, same instant, so the duel is
- * a pure reflex comparison (no luck complaints, and dad can glance across
- * to coach). A cell is eligible only while it's free on both halves — a
- * tapped-away item leaves its cell reserved until its twin resolves too.
+ * SpawnDirector.ts — independent per-player adaptive spawn lanes. Each half
+ * owns its own PRNG, cell choice, spawn timer, target CPS, and CPS velocity.
  */
-import { CELL_COUNT, type ItemType, ROUND, SPAWN } from '../layout';
-import type { PlayerHalf } from './PlayerHalf';
+import Phaser from 'phaser';
+import { CELL_COUNT, type ItemType, SPAWN } from '../layout';
+import type { PlayerHalf, Seat } from './PlayerHalf';
+
+type ItemWeights = Record<ItemType, number>;
+
+export type SpawnLaneDebug = {
+  targetCps: number;
+  cpsVelocity: number;
+  spawnGapMs: number;
+  lifeScale: number;
+  weights: ItemWeights;
+};
+
+export type SpawnDebugState = Record<Seat, SpawnLaneDebug>;
 
 /** Tiny deterministic PRNG (mulberry32) — plenty for spawn variety. */
 function mulberry32(seed: number): () => number {
@@ -19,57 +29,140 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-export class SpawnDirector {
-  private readonly rng: () => number;
-  private readonly halves: readonly [PlayerHalf, PlayerHalf];
-  private sinceSpawnMs = 0;
-  private elapsedMs = 0;
+function progressFor(targetCps: number): number {
+  return Phaser.Math.Clamp(
+    (targetCps - SPAWN.startCps) / (SPAWN.maxCps - SPAWN.startCps),
+    0,
+    1
+  );
+}
 
-  constructor(halves: readonly [PlayerHalf, PlayerHalf], seed = Date.now()) {
-    this.halves = halves;
+function weightsFor(targetCps: number): ItemWeights {
+  const t = progressFor(targetCps);
+  return {
+    tap: Phaser.Math.Linear(SPAWN.easyWeights.tap, SPAWN.hardWeights.tap, t),
+    multi2: Phaser.Math.Linear(SPAWN.easyWeights.multi2, SPAWN.hardWeights.multi2, t),
+    multi3: Phaser.Math.Linear(SPAWN.easyWeights.multi3, SPAWN.hardWeights.multi3, t),
+    bomb: Phaser.Math.Linear(SPAWN.easyWeights.bomb, SPAWN.hardWeights.bomb, t),
+  };
+}
+
+function expectedLoadPerSpawn(weights: ItemWeights): number {
+  let totalWeight = 0;
+  let totalLoad = 0;
+  for (const [itemType, weight] of Object.entries(weights) as [ItemType, number][]) {
+    totalWeight += weight;
+    totalLoad += weight * SPAWN.loadCost[itemType];
+  }
+  return totalLoad / totalWeight;
+}
+
+function spawnGapMs(targetCps: number, weights: ItemWeights): number {
+  const raw = (expectedLoadPerSpawn(weights) / targetCps) * 1000;
+  return Phaser.Math.Clamp(raw, SPAWN.minGapMs, SPAWN.maxGapMs);
+}
+
+function lifeScaleFor(targetCps: number): number {
+  return Phaser.Math.Linear(1, SPAWN.minTargetLifeScale, progressFor(targetCps));
+}
+
+class SpawnLane {
+  private readonly rng: () => number;
+  private readonly half: PlayerHalf;
+  private sinceSpawnMs = 0;
+  private targetCps: number = SPAWN.startCps;
+  private cpsVelocity: number = 0;
+  private currentGapMs: number = spawnGapMs(SPAWN.startCps, weightsFor(SPAWN.startCps));
+
+  constructor(half: PlayerHalf, seed: number) {
+    this.half = half;
     this.rng = mulberry32(seed);
   }
 
-  /** Called only while the round is running. */
   update(delta: number): void {
-    this.elapsedMs += delta;
+    const dt = delta / 1000;
+    this.cpsVelocity = Math.min(
+      SPAWN.maxCpsVelocity,
+      this.cpsVelocity + SPAWN.cpsAcceleration * dt
+    );
+    this.targetCps = Math.min(SPAWN.maxCps, this.targetCps + this.cpsVelocity * dt);
+
+    const weights = weightsFor(this.targetCps);
+    this.currentGapMs = spawnGapMs(this.targetCps, weights);
     this.sinceSpawnMs += delta;
-    // spawn gap ramps across the round, eased so it back-loads (rampExp>1):
-    // calm opening, frantic finish.
-    const t = Math.min(1, this.elapsedMs / ROUND.durationMs);
-    const eased = Math.pow(t, SPAWN.rampExp);
-    const gap = SPAWN.startGapMs + (SPAWN.endGapMs - SPAWN.startGapMs) * eased;
-    if (this.sinceSpawnMs < gap) return;
+    if (this.sinceSpawnMs < this.currentGapMs) return;
 
     const cell = this.pickFreeCell();
     if (cell === undefined) {
-      // board momentarily full on one side — retry shortly, don't skip
-      this.sinceSpawnMs = gap - SPAWN.retryGapMs;
+      this.sinceSpawnMs = Math.max(0, this.currentGapMs - SPAWN.retryGapMs);
       return;
     }
+
     this.sinceSpawnMs = 0;
-    const itemType = this.pickType();
-    for (const half of this.halves) half.spawn(itemType, cell);
+    this.half.spawn(this.pickType(weights), cell, lifeScaleFor(this.targetCps));
+  }
+
+  reportMistake(): void {
+    this.cpsVelocity = 0;
+  }
+
+  debugState(): SpawnLaneDebug {
+    const weights = weightsFor(this.targetCps);
+    return {
+      targetCps: this.targetCps,
+      cpsVelocity: this.cpsVelocity,
+      spawnGapMs: this.currentGapMs,
+      lifeScale: lifeScaleFor(this.targetCps),
+      weights,
+    };
   }
 
   private pickFreeCell(): number | undefined {
-    const a = this.halves[0].freeCells();
-    const b = this.halves[1].freeCells();
+    const availability = this.half.freeCells();
     const free: number[] = [];
     for (let i = 0; i < CELL_COUNT; i++) {
-      if (a[i] && b[i]) free.push(i);
+      if (availability[i]) free.push(i);
     }
     if (free.length === 0) return undefined;
     return free[Math.floor(this.rng() * free.length)];
   }
 
-  private pickType(): ItemType {
-    const r = this.rng();
+  private pickType(weights: ItemWeights): ItemType {
+    const total = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
+    const r = this.rng() * total;
     let acc = 0;
-    for (const [itemType, weight] of Object.entries(SPAWN.weights) as [ItemType, number][]) {
+    for (const [itemType, weight] of Object.entries(weights) as [ItemType, number][]) {
       acc += weight;
       if (r < acc) return itemType;
     }
     return 'tap'; // float-sum fallback
+  }
+}
+
+export class SpawnDirector {
+  private readonly lanes: Record<Seat, SpawnLane>;
+
+  constructor(halves: Record<Seat, PlayerHalf>, seed = Date.now()) {
+    this.lanes = {
+      top: new SpawnLane(halves.top, seed ^ 0x51f15e),
+      bottom: new SpawnLane(halves.bottom, seed ^ 0xb0770d),
+    };
+  }
+
+  /** Called only while the round is running. */
+  update(delta: number): void {
+    this.lanes.top.update(delta);
+    this.lanes.bottom.update(delta);
+  }
+
+  reportMistake(seat: Seat): void {
+    this.lanes[seat].reportMistake();
+  }
+
+  debugState(): SpawnDebugState {
+    return {
+      top: this.lanes.top.debugState(),
+      bottom: this.lanes.bottom.debugState(),
+    };
   }
 }

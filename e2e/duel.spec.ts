@@ -2,8 +2,8 @@
  * duel.spec.ts — Playwright Test port of the old smoke.mjs. Boots the game in
  * a Pixel-6-sized touch viewport, drives it with coordinate taps, and reads
  * live state through the `window.__game` hook (src/main.ts:24) to assert the
- * rules in CLAUDE.md: mirroring, scoring, miss-is-free, the phase machine, and
- * zero console errors. The three deterministic screens also get visual
+ * rules in CLAUDE.md: spawning, scoring, miss-is-free, adaptive pacing, the
+ * phase machine, and zero console errors. The three deterministic screens also get visual
  * baselines (committed under duel.spec.ts-snapshots/).
  *
  * Reusable as a template for other Phaser/canvas projects: the state hook +
@@ -17,13 +17,20 @@ const READY_TOP = { x: 180, y: 200 }; // any point in the top half readies that 
 const READY_BOTTOM = { x: 180, y: 540 };
 
 type Half = 'top' | 'bottom';
-type LiveItem = { x: number; y: number; cell: number; type: string };
+type LiveItem = { x: number; y: number; cell: number; type: string; lifeMs: number };
+type Difficulty = {
+  targetCps: number;
+  cpsVelocity: number;
+  spawnGapMs: number;
+  lifeScale: number;
+};
 type State = {
   phase: string;
   top: LiveItem[];
   bottom: LiveItem[];
   scoreTop: number;
   scoreBottom: number;
+  difficulty: Record<Half, Difficulty>;
 };
 
 // Console/page errors collected per test (listeners attached in gotoGame).
@@ -50,9 +57,13 @@ async function tap(page: Page, x: number, y: number): Promise<void> {
   await page.mouse.click(box.x + x * sx, box.y + y * sy);
 }
 
-/** Bottom-half item at local (x, y) lives at screen (x, y + 370). */
-async function tapItem(page: Page, item: LiveItem): Promise<void> {
-  await tap(page, item.x, item.y + DIVIDER_Y);
+/** Item local coords map through the owning half's rotated container. */
+async function tapItem(page: Page, item: LiveItem, half: Half = 'bottom'): Promise<void> {
+  if (half === 'top') {
+    await tap(page, 360 - item.x, DIVIDER_Y - item.y);
+  } else {
+    await tap(page, item.x, item.y + DIVIDER_Y);
+  }
 }
 
 async function readState(page: Page): Promise<State> {
@@ -65,13 +76,20 @@ async function readState(page: Page): Promise<State> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .filter((i: any) => i.isLive)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((i: any) => ({ x: i.x, y: i.y, cell: i.cellIndex, type: i.itemType }));
+        .map((i: any) => ({
+          x: i.x,
+          y: i.y,
+          cell: i.cellIndex,
+          type: i.itemType,
+          lifeMs: i.lifeMs,
+        }));
     return {
       phase: scene.phase,
       top: dump(scene.halves.top),
       bottom: dump(scene.halves.bottom),
       scoreTop: scene.halves.top.score,
       scoreBottom: scene.halves.bottom.score,
+      difficulty: scene.director.debugState(),
     };
   });
 }
@@ -126,12 +144,16 @@ test('boots clean — reaches play with no console errors', async ({ page }) => 
   expect(errors).toEqual([]);
 });
 
-test('spawns are mirrored across both halves', async ({ page }) => {
+test('independent spawn lanes populate both halves without cell collisions', async ({ page }) => {
   await startRound(page);
-  // Compare as soon as something is on screen; twins age in lockstep (one director).
-  const s = await waitForState(page, (st) => (st.top.length > 0 ? st : null), 'a spawned item');
-  const sig = (items: LiveItem[]) => items.map((i) => `${i.cell}:${i.type}`).sort();
-  expect(sig(s.top)).toEqual(sig(s.bottom));
+  const s = await waitForState(
+    page,
+    (st) => (st.top.length > 0 && st.bottom.length > 0 ? st : null),
+    'spawned items on both halves'
+  );
+  for (const items of [s.top, s.bottom]) {
+    expect(new Set(items.map((i) => i.cell)).size).toBe(items.length);
+  }
 });
 
 test('single-tap target scores +1 and despawns', async ({ page }) => {
@@ -199,6 +221,107 @@ test('a missed (expired) target costs nothing', async ({ page }) => {
   const after = await readState(page);
   expect(after.phase).toBe('play'); // still mid-round
   expect(after.scoreBottom).toBe(before); // expiry is free
+});
+
+test('clean play advances target CPS and lowers the spawn gap', async ({ page }) => {
+  await startRound(page);
+  const before = (await readState(page)).difficulty.bottom;
+
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scene = (window as any).__game.scene.keys['Duel'];
+    for (let i = 0; i < 100; i++) scene.director.update(100);
+  });
+
+  const after = (await readState(page)).difficulty.bottom;
+  expect(after.targetCps).toBeGreaterThan(before.targetCps);
+  expect(after.spawnGapMs).toBeLessThan(before.spawnGapMs);
+});
+
+test('bomb tap resets only that player CPS velocity', async ({ page }) => {
+  await startRound(page);
+  const bomb = await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scene = (window as any).__game.scene.keys['Duel'];
+    for (let i = 0; i < 100; i++) scene.director.update(100);
+    scene.director.update = () => {};
+    for (const half of [scene.halves.top, scene.halves.bottom]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const item of [...half.items] as any[]) item.destroy();
+      half.items.clear();
+    }
+    scene.halves.bottom.spawn('bomb', 4);
+    const item = [...scene.halves.bottom.items][0];
+    return { x: item.x, y: item.y, cell: item.cellIndex, type: item.itemType, lifeMs: item.lifeMs };
+  });
+  const before = (await readState(page)).difficulty;
+  expect(before.bottom.cpsVelocity).toBeGreaterThan(0);
+  expect(before.top.cpsVelocity).toBeGreaterThan(0);
+
+  await tapItem(page, bomb);
+  await page.waitForTimeout(120);
+
+  const after = (await readState(page)).difficulty;
+  expect(after.bottom.cpsVelocity).toBe(0);
+  expect(after.top.cpsVelocity).toBeGreaterThan(0);
+});
+
+test('expired non-bomb target resets only that player CPS velocity', async ({ page }) => {
+  await startRound(page);
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scene = (window as any).__game.scene.keys['Duel'];
+    for (let i = 0; i < 100; i++) scene.director.update(100);
+    scene.director.update = () => {};
+    for (const half of [scene.halves.top, scene.halves.bottom]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const item of [...half.items] as any[]) item.destroy();
+      half.items.clear();
+    }
+    scene.halves.bottom.spawn('tap', 4);
+  });
+
+  await page.waitForTimeout(2100);
+
+  const after = (await readState(page)).difficulty;
+  expect(after.bottom.cpsVelocity).toBe(0);
+  expect(after.top.cpsVelocity).toBeGreaterThan(0);
+});
+
+test('expired bomb does not reset CPS velocity', async ({ page }) => {
+  await startRound(page);
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scene = (window as any).__game.scene.keys['Duel'];
+    for (let i = 0; i < 100; i++) scene.director.update(100);
+    scene.director.update = () => {};
+    for (const half of [scene.halves.top, scene.halves.bottom]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const item of [...half.items] as any[]) item.destroy();
+      half.items.clear();
+    }
+    scene.halves.bottom.spawn('bomb', 4);
+  });
+  const before = (await readState(page)).difficulty.bottom.cpsVelocity;
+
+  await page.waitForTimeout(2500);
+
+  const after = (await readState(page)).difficulty.bottom.cpsVelocity;
+  expect(after).toBeGreaterThanOrEqual(before);
+});
+
+test('non-bomb lifetimes shrink as target CPS rises', async ({ page }) => {
+  await startRound(page);
+  const before = (await readState(page)).difficulty.bottom.lifeScale;
+
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scene = (window as any).__game.scene.keys['Duel'];
+    for (let i = 0; i < 120; i++) scene.director.update(100);
+  });
+
+  const after = (await readState(page)).difficulty.bottom.lifeScale;
+  expect(after).toBeLessThan(before);
 });
 
 test('phase machine runs ready → countdown → play → results', async ({ page }) => {
